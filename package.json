@@ -1,0 +1,9 @@
+{
+  "name": "tanmatra",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "python -c \"from api.main import app; print('Build OK')\"",
+    "start": "uvicorn api.main:app --host 0.0.0.0 --port 3000",
+    "dev": "uvicorn api.main:app --host 0.0.0.0 --port 3000 --reload"
+  }
+}
