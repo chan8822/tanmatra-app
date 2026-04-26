@@ -2,11 +2,28 @@ import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { API } from "@/lib/api";
-import { Search, Plus, Minus, ShoppingCart, SlidersHorizontal, ChevronRight } from "lucide-react";
+import { categories } from "@/data/menu";
+import { Search, Plus, Minus, ShoppingCart, SlidersHorizontal, ChevronRight, Leaf, Flame } from "lucide-react";
+
+const catColors: Record<string, string> = {
+  soups: "from-amber-900/40 to-black/80",
+  wraps: "from-orange-900/40 to-black/80",
+  omelettes: "from-yellow-900/40 to-black/80",
+  salads: "from-green-900/40 to-black/80",
+  sandwiches: "from-rose-900/40 to-black/80",
+  pasta: "from-red-900/40 to-black/80",
+  "burrito-bowls": "from-amber-900/40 to-black/80",
+  "healthy-meals": "from-teal-900/40 to-black/80",
+  breakfast: "from-orange-900/40 to-black/80",
+  "meal-boxes": "from-blue-900/40 to-black/80",
+  drinks: "from-cyan-900/40 to-black/80",
+  detox: "from-emerald-900/40 to-black/80",
+  smoothies: "from-lime-900/40 to-black/80",
+  desserts: "from-pink-900/40 to-black/80",
+};
 
 export default function MenuPage() {
   const [items, setItems] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
   const [activeCat, setActiveCat] = useState("all");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -16,9 +33,8 @@ export default function MenuPage() {
 
   useEffect(() => {
     Promise.all([API.items(), API.categories()])
-      .then(([it, cats]) => {
+      .then(([it, _cats]) => {
         setItems(it.items || it || []);
-        setCategories(cats || []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -51,6 +67,11 @@ export default function MenuPage() {
     window.dispatchEvent(new Event("storage"));
   };
 
+  const getImage = (item: any) => {
+    const cat = categories.find((c) => c.id === item.category_id);
+    return item.image || cat?.image || `/dish/${item.id}.jpg`;
+  };
+
   return (
     <div className="fade-in pb-24">
       <Header title="Menu" backTo="/" />
@@ -75,7 +96,7 @@ export default function MenuPage() {
           <div className="mt-2 p-3 bg-[#1a1c1c] border border-white/10 rounded-lg flex items-center gap-3">
             <label className="flex items-center gap-2 text-sm text-white/70 cursor-pointer">
               <input type="checkbox" checked={vegOnly} onChange={(e) => setVegOnly(e.target.checked)} className="accent-[#D4AF37]" />
-              Vegetarian Only
+              <Leaf size={14} className="text-green-400" /> Vegetarian Only
             </label>
             <button onClick={() => { setActiveCat("all"); setVegOnly(false); setSearch(""); }} className="text-xs text-[#D4AF37] ml-auto">Reset</button>
           </div>
@@ -98,13 +119,28 @@ export default function MenuPage() {
       ) : (
         <div className="px-4 space-y-3 mt-2">
           {filtered.map((item) => (
-            <div key={item.id} className="bg-[#1a1c1c] border border-white/5 rounded-xl p-3 flex gap-3">
-              <Link to={`/dish/${item.id}`} className="w-20 h-20 shrink-0 rounded-lg bg-gradient-to-br from-[rgba(212,175,55,0.15)] to-[#0c0f0f] flex items-center justify-center text-2xl">
-                {item.is_vegetarian ? "🥗" : "🍗"}
+            <div key={item.id} className="bg-[#1a1c1c] border border-white/5 rounded-xl overflow-hidden flex gap-3">
+              <Link to={`/dish/${item.id}`} className="w-24 h-24 shrink-0 relative">
+                <img
+                  src={getImage(item)}
+                  alt={item.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+                <div className={`absolute inset-0 bg-gradient-to-br ${catColors[item.category_id] || "from-[#D4AF37]/20 to-[#0c0f0f]"} flex items-center justify-center text-2xl ${item.image || categories.find((c) => c.id === item.category_id)?.image ? 'opacity-0' : ''}`}>
+                  {item.is_vegetarian ? "🥗" : "🍗"}
+                </div>
               </Link>
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 py-2 pr-2">
                 <Link to={`/dish/${item.id}`}>
-                  <h3 className="text-sm font-semibold text-white truncate">{item.name}</h3>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="text-sm font-semibold text-white truncate">{item.name}</h3>
+                    {item.is_vegetarian ? (
+                      <Leaf size={10} className="text-green-400 shrink-0" />
+                    ) : (
+                      <Flame size={10} className="text-red-400 shrink-0" />
+                    )}
+                  </div>
                 </Link>
                 <p className="text-xs text-white/40 mt-0.5">{item.calories || 0} kcal · {item.protein || 0}g protein</p>
                 <div className="flex items-center justify-between mt-2">
