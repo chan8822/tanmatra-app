@@ -1,24 +1,44 @@
 services:
   - type: web
-    name: tanmatra-api
-    env: python
-    runtime: python3
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    name: tanmatra-backend
+    runtime: docker
+    plan: standard
     envVars:
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: tanmatra-db
+          property: connectionString
       - key: RAZORPAY_KEY_ID
         sync: false
       - key: RAZORPAY_KEY_SECRET
         sync: false
       - key: GEMINI_API_KEY
         sync: false
-      - key: JWT_SECRET
+      - key: TWILIO_SID
+        sync: false
+      - key: TWILIO_TOKEN
+        sync: false
+      - key: TWILIO_PHONE
+        sync: false
+      - key: ENATEGA_API_KEY
+        sync: false
+      - key: SECRET_KEY
         generateValue: true
-      - key: ENVIRONMENT
-        value: production
-      - key: CORS_ORIGINS
-        value: "https://yourdomain.com,https://www.yourdomain.com"
+    buildCommand: ""
+    startCommand: ""
+    dockerfilePath: ./Dockerfile
     healthCheckPath: /health
-    autoDeploy: true
+
+  - type: static
+    name: tanmatra-frontend
+    plan: starter
+    buildCommand: "npm ci && npm run build"
+    publishDir: dist
+    envVars:
+      - key: VITE_API_BASE
+        value: https://tanmatra-backend.onrender.com
+
+databases:
+  - name: tanmatra-db
+    plan: starter
+    ipAllowList: []

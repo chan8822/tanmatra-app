@@ -4,7 +4,14 @@
 
 import { categories, menuItems } from "@/data/menu";
 
-const API_BASE = ""; // HOOK: Set to "https://your-backend.com" when backend is live
+// Auto-detect backend URL. Priority:
+// 1. VITE_API_BASE env var (set at build time for production)
+// 2. window.__API_BASE__ (runtime override)
+// 3. Empty string = use baked-in data (development / standalone)
+const API_BASE = import.meta.env.VITE_API_BASE || (window as any).__API_BASE__ || "";
+
+// Debug: log which mode we're in
+console.log("[API] Base URL:", API_BASE || "STANDALONE MODE (baked-in data)");
 
 async function apiFetch(method: string, path: string, body?: object) {
   if (!API_BASE) throw new Error("Backend not configured");
