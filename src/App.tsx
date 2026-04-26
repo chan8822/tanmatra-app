@@ -11,6 +11,12 @@ import TrustPage from "@/pages/Trust";
 import TrackPage from "@/pages/Track";
 import FamilyPage from "@/pages/Family";
 import AdminPage from "@/pages/Admin";
+import SubscriptionsPage from "@/pages/Subscriptions";
+import ReferralPage from "@/pages/Referral";
+import RiderTrackingPage from "@/pages/RiderTracking";
+import RateOrderPage from "@/pages/RateOrder";
+import SupportPage from "@/pages/Support";
+import NotificationsPage from "@/pages/Notifications";
 
 function App() {
   return (
@@ -29,6 +35,12 @@ function App() {
           <Route path="/track" element={<TrackPage />} />
           <Route path="/family" element={<FamilyPage />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/subscriptions" element={<SubscriptionsPage />} />
+          <Route path="/refer" element={<ReferralPage />} />
+          <Route path="/tracking" element={<RiderTrackingPage />} />
+          <Route path="/rate" element={<RateOrderPage />} />
+          <Route path="/support" element={<SupportPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </div>

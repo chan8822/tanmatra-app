@@ -1,42 +1,58 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { ShoppingCart, ChevronLeft } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { ShoppingCart, ArrowLeft, Bell } from "lucide-react";
 
 export function Header({ title, backTo }: { title: string; backTo?: string }) {
-  const navigate = useNavigate();
+  const location = useLocation();
   const [cartCount, setCartCount] = useState(0);
+  const [notifCount, setNotifCount] = useState(0);
 
   useEffect(() => {
-    // Get cart count from localStorage (sync with cart page)
-    const sync = () => {
+    const update = () => {
       const cart = JSON.parse(localStorage.getItem("tanmatra_cart") || "[]");
-      setCartCount(cart.reduce((s: number, c: any) => s + c.qty, 0));
+      setCartCount(cart.reduce((s: number, c: any) => s + (c.qty || 1), 0));
+      const notifs = JSON.parse(localStorage.getItem("tanmatra_notifications") || "[]");
+      setNotifCount(notifs.filter((n: any) => !n.read).length);
     };
-    sync();
-    window.addEventListener("storage", sync);
-    return () => window.removeEventListener("storage", sync);
+    update();
+    window.addEventListener("storage", update);
+    return () => window.removeEventListener("storage", update);
   }, []);
 
+  const showCart = !location.pathname.includes("/cart") && !location.pathname.includes("/checkout") && !location.pathname.includes("/admin");
+
   return (
-    <div className="sticky top-0 z-30 bg-[rgba(12,15,15,0.92)] backdrop-blur-md border-b border-white/5 px-4 py-3">
-      <div className="flex items-center gap-3">
-        {backTo ? (
-          <button onClick={() => navigate(backTo)} className="text-[#D4AF37] text-xl">
-            <ChevronLeft size={24} />
-          </button>
-        ) : (
-          <span className="w-6" />
-        )}
-        <h1 className="font-serif text-lg text-[#D4AF37] font-semibold">{title}</h1>
-        <Link to="/cart" className="ml-auto relative">
-          <ShoppingCart size={22} className="text-white/60" />
-          {cartCount > 0 && (
-            <span className="absolute -top-1 -right-2 bg-[#D4AF37] text-[#0c0f0f] text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-              {cartCount}
-            </span>
+    <header className="sticky top-0 z-50 bg-[#0c0f0f]/90 backdrop-blur-md border-b border-white/5">
+      <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center gap-3">
+          {backTo && (
+            <Link to={backTo} className="p-1.5 -ml-1.5 text-white/60 hover:text-white transition-colors">
+              <ArrowLeft size={20} />
+            </Link>
           )}
-        </Link>
+          <h1 className="text-base font-semibold tracking-tight text-white">{title}</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link to="/notifications" className="relative p-1.5 text-white/60 hover:text-white transition-colors">
+            <Bell size={18} />
+            {notifCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 rounded-full text-[9px] font-bold text-white flex items-center justify-center">
+                {notifCount > 9 ? "9+" : notifCount}
+              </span>
+            )}
+          </Link>
+          {showCart && (
+            <Link to="/cart" className="relative p-1.5 text-white/60 hover:text-white transition-colors">
+              <ShoppingCart size={18} />
+              {cartCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[#D4AF37] rounded-full text-[9px] font-bold text-[#0c0f0f] flex items-center justify-center">
+                  {cartCount > 9 ? "9+" : cartCount}
+                </span>
+              )}
+            </Link>
+          )}
+        </div>
       </div>
-    </div>
+    </header>
   );
 }

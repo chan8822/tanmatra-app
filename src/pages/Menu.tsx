@@ -120,14 +120,23 @@ export default function MenuPage() {
         <div className="px-4 space-y-3 mt-2">
           {filtered.map((item) => (
             <div key={item.id} className="bg-[#1a1c1c] border border-white/5 rounded-xl overflow-hidden flex gap-3">
-              <Link to={`/dish/${item.id}`} className="w-24 h-24 shrink-0 relative">
+              <Link to={`/dish/${item.id}`} className="w-24 h-24 shrink-0 relative overflow-hidden rounded-l-xl">
                 <img
                   src={getImage(item)}
                   alt={item.name}
                   className="w-full h-full object-cover"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  loading="lazy"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    const fallback = target.nextElementSibling as HTMLElement;
+                    if (fallback) fallback.style.display = 'flex';
+                  }}
                 />
-                <div className={`absolute inset-0 bg-gradient-to-br ${catColors[item.category_id] || "from-[#D4AF37]/20 to-[#0c0f0f]"} flex items-center justify-center text-2xl ${item.image || categories.find((c) => c.id === item.category_id)?.image ? 'opacity-0' : ''}`}>
+                <div
+                  className={`absolute inset-0 bg-gradient-to-br ${catColors[item.category_id] || "from-[#D4AF37]/20 to-[#0c0f0f]"} items-center justify-center text-2xl`}
+                  style={{ display: 'none' }}
+                >
                   {item.is_vegetarian ? "🥗" : "🍗"}
                 </div>
               </Link>

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { API } from "@/lib/api";
-import { ChefHat, CheckCircle, Package, Truck, MapPin, Phone, Clock, ArrowRight } from "lucide-react";
+import { ChefHat, CheckCircle, Package, Truck, MapPin, Phone, Clock, ArrowRight, Star, RefreshCw } from "lucide-react";
 
 const steps = [
   { key: "received", label: "Received", icon: ChefHat },
@@ -101,13 +101,40 @@ export default function OrderDetailPage() {
         </div>
 
         {/* Tracking CTA */}
-        <Link to={`/track?order=${order.id}`} className="block bg-gradient-to-r from-[#D4AF37]/10 to-[#1a1c1c] border border-[#D4AF37]/20 rounded-xl p-4 flex items-center justify-between">
+        <Link to={`/tracking?order=${order.id}`} className="block bg-gradient-to-r from-[#D4AF37]/10 to-[#1a1c1c] border border-[#D4AF37]/20 rounded-xl p-4 flex items-center justify-between">
           <div>
             <p className="text-xs text-[#D4AF37] mb-0.5">Live Tracking</p>
             <p className="text-sm text-white/70">Track rider location & ETA</p>
           </div>
           <ArrowRight size={18} className="text-[#D4AF37]" />
         </Link>
+
+        {/* Repeat Order */}
+        <button
+          onClick={() => {
+            const saved = JSON.parse(localStorage.getItem("tanmatra_cart") || "[]");
+            const repeatItems = (order.items || []).map((it: any) => ({
+              itemId: it.menu_item_id || it.itemId || it.id,
+              qty: it.quantity || it.qty || 1,
+              name: it.name,
+              price: it.unit_price || it.price || 0,
+              veg: it.veg ?? true,
+            }));
+            localStorage.setItem("tanmatra_cart", JSON.stringify([...saved, ...repeatItems]));
+            window.dispatchEvent(new Event("storage"));
+            window.location.href = "#/cart";
+          }}
+          className="w-full py-3 bg-[#1a1c1c] border border-[#D4AF37]/30 rounded-xl text-sm font-semibold text-[#D4AF37] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+        >
+          <RefreshCw size={16} /> Repeat Order
+        </button>
+
+        {/* Rate Order (if delivered) */}
+        {(order.status || "").toLowerCase() === "delivered" && (
+          <Link to={`/rate?order=${order.id}`} className="block py-3 bg-gradient-to-r from-amber-500/10 to-[#1a1c1c] border border-amber-500/20 rounded-xl text-sm font-semibold text-amber-400 flex items-center justify-center gap-2">
+            <Star size={16} /> Rate Your Order
+          </Link>
+        )}
       </div>
     </div>
   );

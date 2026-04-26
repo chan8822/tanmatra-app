@@ -116,6 +116,29 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Quick Actions */}
+      <section className="px-6 py-6 space-y-3">
+        <h2 className="font-serif text-xl text-[#D4AF37] mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-2 gap-3">
+          <Link to="/subscriptions" className="p-3 bg-[#1a1c1c] border border-white/5 rounded-xl text-center">
+            <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/10 flex items-center justify-center mx-auto mb-1.5 text-[#D4AF37]">📅</div>
+            <span className="text-[10px] text-white/70">Subscriptions</span>
+          </Link>
+          <Link to="/refer" className="p-3 bg-[#1a1c1c] border border-white/5 rounded-xl text-center">
+            <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/10 flex items-center justify-center mx-auto mb-1.5 text-[#D4AF37]">🎁</div>
+            <span className="text-[10px] text-white/70">Refer & Earn</span>
+          </Link>
+          <Link to="/support" className="p-3 bg-[#1a1c1c] border border-white/5 rounded-xl text-center">
+            <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/10 flex items-center justify-center mx-auto mb-1.5 text-[#D4AF37]">💬</div>
+            <span className="text-[10px] text-white/70">Support</span>
+          </Link>
+          <Link to="/notifications" className="p-3 bg-[#1a1c1c] border border-white/5 rounded-xl text-center">
+            <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/10 flex items-center justify-center mx-auto mb-1.5 text-[#D4AF37]">🔔</div>
+            <span className="text-[10px] text-white/70">Notifications</span>
+          </Link>
+        </div>
+      </section>
+
       {/* Tracks */}
       <section className="px-6 py-10 space-y-3">
         <h2 className="font-serif text-2xl text-[#D4AF37] mb-4">Your Track</h2>
