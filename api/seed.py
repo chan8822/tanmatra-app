@@ -1,9 +1,10 @@
 from api.database import SessionLocal, engine
 from api.models import Base, MenuCategory, MenuItem, InventoryItem, Vendor, Staff, RecipeBOM
 
-def seed_all():
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
+def seed_all(db=None):
+    if db is None:
+        Base.metadata.create_all(bind=engine)
+        db = SessionLocal()
     
     # Check if already seeded
     if db.query(MenuCategory).first():

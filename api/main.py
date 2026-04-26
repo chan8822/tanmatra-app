@@ -1,33 +1,92 @@
-from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi import FastAPI, Depends, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Optional
 import random
 import string
+import logging
+import hmac
+import hashlib
 from datetime import datetime, timedelta
 
 from api.database import get_db, engine
 from api import models, schemas
 from api.seed import seed_all
+from api.config import get_settings
+
+settings = get_settings()
+logger = logging.getLogger(__name__)
 
 # Create tables and seed on startup
 models.Base.metadata.create_all(bind=engine)
 try:
     seed_all()
 except Exception as e:
-    print(f"Seed skipped or failed: {e}")
+    logger.warning(f"Seed skipped or failed: {e}")
 
-app = FastAPI(title="Tanmatra API", version="1.0.0")
+app = FastAPI(
+    title=settings.APP_NAME,
+    version=settings.VERSION,
+    docs_url="/api/docs" if settings.DEBUG else None,
+    redoc_url="/api/redoc" if settings.DEBUG else None,
+)
 
+# CORS — restrict in production
+origins = settings.CORS_ORIGINS.split(",") if settings.CORS_ORIGINS else ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Global exception handler
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "status": "error",
+            "message": "Internal server error" if not settings.DEBUG else str(exc),
+        }
+    )
+
+# Health check
+@app.get("/health")
+def health_check():
+    return {
+        "status": "healthy",
+        "environment": settings.ENVIRONMENT,
+        "version": settings.VERSION,
+        "timestamp": datetime.now().isoformat()
+    }
+
+# Startup checks
+@app.on_event("startup")
+async def startup_checks():
+    checks = {}
+    try:
+        from api.integrations.razorpay_client import get_razorpay
+        rp = get_razorpay()
+        checks["razorpay"] = rp.client is not None
+    except Exception as e:
+        checks["razorpay"] = False
+        logger.warning(f"Razorpay not available: {e}")
+    
+    try:
+        from api.integrations.gemini_client import get_gemini
+        gm = get_gemini()
+        checks["gemini"] = gm.api_key != ""
+    except Exception as e:
+        checks["gemini"] = False
+        logger.warning(f"Gemini not available: {e}")
+    
+    logger.info(f"Startup checks: {checks}")
 
 # === AUTH ===
 @app.post("/api/auth/otp/send")
@@ -423,6 +482,60 @@ def delivery_zones():
 def zone_analytics():
     enatega = get_enatega()
     return enatega.zone_analytics()
+
+# === RAZORPAY WEBHOOK (Production-critical) ===
+@app.post("/api/payments/razorpay/webhook")
+async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
+    """
+    Verify Razorpay webhook signature and process payment events.
+    Register this endpoint in Razorpay Dashboard → Settings → Webhooks.
+    """
+    body = await request.body()
+    signature = request.headers.get("X-Razorpay-Signature")
+    
+    # Verify signature
+    expected_signature = hmac.new(
+        settings.RAZORPAY_KEY_SECRET.encode(),
+        body,
+        hashlib.sha256
+    ).hexdigest()
+    
+    if signature != expected_signature and not settings.DEBUG:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid signature")
+    
+    payload = await request.json()
+    event = payload.get("event", "")
+    
+    logger.info(f"Razorpay webhook received: {event}")
+    
+    if event == "order.paid":
+        payment_entity = payload.get("payload", {}).get("payment", {}).get("entity", {})
+        order_id = payment_entity.get("notes", {}).get("order_id", "")
+        payment_id = payment_entity.get("id", "")
+        
+        # Update order status
+        order = db.query(models.Order).filter(models.Order.id == order_id).first()
+        if order:
+            order.payment_status = "paid"
+            order.razorpay_payment_id = payment_id
+            db.commit()
+            logger.info(f"Order {order_id} marked as paid")
+        
+        return {"status": "success", "order_id": order_id}
+    
+    elif event == "payment.failed":
+        payment_entity = payload.get("payload", {}).get("payment", {}).get("entity", {})
+        order_id = payment_entity.get("notes", {}).get("order_id", "")
+        
+        order = db.query(models.Order).filter(models.Order.id == order_id).first()
+        if order:
+            order.payment_status = "failed"
+            db.commit()
+            logger.warning(f"Order {order_id} payment failed")
+        
+        return {"status": "failure_recorded", "order_id": order_id}
+    
+    return {"status": "acknowledged", "event": event}
 
 # === STATIC FILES (Frontend) ===
 app.mount("/", StaticFiles(directory="dist", html=True), name="static")
