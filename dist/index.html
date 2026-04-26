@@ -238,12 +238,6 @@ function renderHome(app) {
         </div>
       </section>
 
-      <script>
-      (function loadRecsOnMount() {
-        setTimeout(() => loadAIRecommendations(), 1500);
-      })();
-      </script>
-
       <footer class="px-6 py-10 text-center border-t border-white/5">
         <h3 class="font-display text-gold text-sm tracking-[0.2em] uppercase mb-2">TANMATRA</h3>
         <p class="text-xs text-white/30">Crafted for the discerning palate.</p>
@@ -946,6 +940,7 @@ function initChatWidget() {
 window.addEventListener('hashchange', render);
 initData();
 initChatWidget();
+setTimeout(() => loadAIRecommendations(), 1500);
 </script>
 </body>
 </html>

@@ -1,6 +1,12 @@
 import os
-import razorpay
 from typing import Optional, Dict, Any
+
+try:
+    import razorpay
+    RAZORPAY_AVAILABLE = True
+except ImportError:
+    RAZORPAY_AVAILABLE = False
+    razorpay = None
 
 # Razorpay Test Keys (sandbox)
 RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID", "rzp_test_demo_key")
@@ -8,7 +14,12 @@ RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "demo_secret")
 
 class RazorpayClient:
     def __init__(self):
-        self.client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+        self.client = None
+        if RAZORPAY_AVAILABLE and razorpay:
+            try:
+                self.client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+            except Exception:
+                pass
     
     def create_order(self, amount_inr: int, receipt: str, notes: Optional[Dict] = None):
         """Create a Razorpay order for payment. Amount in paise."""
