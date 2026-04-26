@@ -344,5 +344,85 @@ def get_recipe_boms(db: Session = Depends(get_db)):
         for b in boms
     ]
 
+# === INTEGRATION IMPORTS ===
+from api.integrations.razorpay_client import get_razorpay
+from api.integrations.gemini_client import get_gemini
+from api.integrations.enatega_client import get_enatega
+
+# === RAZORPAY PAYMENTS ===
+@app.post("/api/payments/razorpay/order")
+def create_razorpay_order(amount: int, receipt: str, user_id: int = Query(1)):
+    rp = get_razorpay()
+    result = rp.create_order(amount, receipt, notes={"user_id": user_id})
+    return result
+
+@app.post("/api/payments/razorpay/verify")
+def verify_razorpay_payment(payment_id: str, order_id: str, signature: str):
+    rp = get_razorpay()
+    return rp.verify_payment(payment_id, order_id, signature)
+
+@app.post("/api/payments/razorpay/subscription-plan")
+def create_subscription_plan(name: str, amount: int, interval: str = "weekly"):
+    rp = get_razorpay()
+    return rp.create_subscription_plan(name, amount, interval)
+
+@app.post("/api/payments/razorpay/subscription")
+def create_razorpay_subscription(plan_id: str, user_id: int = Query(1)):
+    rp = get_razorpay()
+    return rp.create_subscription(plan_id, customer_notes={"user_id": user_id})
+
+# === GEMINI AI ===
+@app.post("/api/ai/recommend")
+async def ai_recommend(user_id: int = Query(1), db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    dishes = db.query(models.MenuItem).filter(models.MenuItem.in_stock == True).all()
+    profile = {"name": user.name if user else "Guest", "segment": user.segment if user else "Everyday"}
+    gemini = get_gemini()
+    result = await gemini.recommend_for_user(profile, [d.__dict__ for d in dishes])
+    return result
+
+@app.post("/api/ai/nutrition-analysis")
+async def ai_nutrition_analysis(meals: list, user_id: int = Query(1)):
+    gemini = get_gemini()
+    result = await gemini.analyze_daily_nutrition(meals)
+    return result
+
+@app.post("/api/ai/chat")
+async def ai_chat(message: str, user_id: int = Query(1)):
+    gemini = get_gemini()
+    result = await gemini.generate_content(message)
+    return result
+
+# === ENATEGA DELIVERY ===
+@app.get("/api/delivery/estimate")
+def estimate_delivery(zone: str, order_total: int = 0, priority: str = "Direct"):
+    enatega = get_enatega()
+    return enatega.estimate_delivery(zone, order_total, priority)
+
+@app.post("/api/delivery/assign-rider")
+def assign_rider(order_id: str, zone: str, priority: str = "Direct"):
+    enatega = get_enatega()
+    return enatega.assign_rider(order_id, zone, priority)
+
+@app.post("/api/delivery/update-status")
+def update_delivery_status(order_id: str, status: str):
+    enatega = get_enatega()
+    return enatega.update_delivery_status(order_id, status)
+
+@app.get("/api/delivery/tracking/{order_id}")
+def live_tracking(order_id: str):
+    enatega = get_enatega()
+    return enatega.get_live_tracking(order_id)
+
+@app.get("/api/delivery/zones")
+def delivery_zones():
+    from api.integrations.enatega_client import NOIDA_ZONES
+    return NOIDA_ZONES
+
+@app.get("/api/delivery/zone-analytics")
+def zone_analytics():
+    enatega = get_enatega()
+    return enatega.zone_analytics()
+
 # === STATIC FILES (Frontend) ===
 app.mount("/", StaticFiles(directory="dist", html=True), name="static")

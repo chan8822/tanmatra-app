@@ -66,6 +66,31 @@ const TanmatraAPI = {
     get: (id) => apiGET(`/api/orders/${id}`),
   },
 
+  // Razorpay Payments
+  payments: {
+    createOrder: (amount, receipt, userId) => apiPOST('/api/payments/razorpay/order?user_id=' + (userId || 1), { amount, receipt }),
+    verify: (payment_id, order_id, signature) => apiPOST('/api/payments/razorpay/verify', { payment_id, order_id, signature }),
+    createPlan: (name, amount, interval) => apiPOST('/api/payments/razorpay/subscription-plan', { name, amount, interval }),
+    createSubscription: (plan_id, userId) => apiPOST('/api/payments/razorpay/subscription?user_id=' + (userId || 1), { plan_id }),
+  },
+
+  // Gemini AI
+  ai: {
+    recommend: (userId) => apiPOST('/api/ai/recommend?user_id=' + (userId || 1)),
+    analyzeNutrition: (meals, userId) => apiPOST('/api/ai/nutrition-analysis?user_id=' + (userId || 1), meals),
+    chat: (message, userId) => apiPOST('/api/ai/chat?user_id=' + (userId || 1), { message }),
+  },
+
+  // Enatega Delivery
+  delivery: {
+    estimate: (zone, total, priority) => apiGET(`/api/delivery/estimate?zone=${encodeURIComponent(zone)}&order_total=${total}&priority=${priority}`),
+    assignRider: (orderId, zone, priority) => apiPOST('/api/delivery/assign-rider', { order_id: orderId, zone, priority }),
+    updateStatus: (orderId, status) => apiPOST('/api/delivery/update-status', { order_id: orderId, status }),
+    tracking: (orderId) => apiGET(`/api/delivery/tracking/${orderId}`),
+    zones: () => apiGET('/api/delivery/zones'),
+    zoneAnalytics: () => apiGET('/api/delivery/zone-analytics'),
+  },
+
   // Admin
   admin: {
     inventory: () => apiGET('/api/inventory'),
