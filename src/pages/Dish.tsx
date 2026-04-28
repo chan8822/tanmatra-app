@@ -2,19 +2,23 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { API } from "@/lib/api";
+import { useCart } from "@/hooks/useCart";
+import { showToast } from "@/components/Toast";
 import { categories } from "@/data/menu";
 import { Plus, Minus, ShoppingCart, Heart, ChevronRight, Flame, Wheat, Droplets, Shield, CheckCircle, Leaf, Info } from "lucide-react";
 
 export default function DishPage() {
   const { id } = useParams<{ id: string }>();
+  const { addToCart: addToCartHook, cart } = useCart();
   const [item, setItem] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [qty, setQty] = useState(1);
-  const [inCart, setInCart] = useState(false);
   const [liked, setLiked] = useState(false);
   const [spiceLevel, setSpiceLevel] = useState("medium");
   const [customizations, setCustomizations] = useState<string[]>([]);
   const [instructions, setInstructions] = useState("");
+
+  const inCart = id ? (cart.items || []).some((i: any) => i.dish_id === id) : false;
 
   useEffect(() => {
     if (!id) return;
@@ -27,35 +31,16 @@ export default function DishPage() {
       })
       .catch(() => setLoading(false));
 
-    const saved = JSON.parse(localStorage.getItem("tanmatra_cart") || "[]");
-    const existing = saved.find((c: any) => (c.itemId || c.menu_item_id) === id);
-    if (existing) {
-      setInCart(true);
-      setQty(existing.qty || existing.quantity || 1);
-      setSpiceLevel(existing.spiceLevel || "medium");
-      setCustomizations(existing.customizations || []);
-      setInstructions(existing.instructions || "");
-    }
   }, [id]);
 
-  const addToCart = () => {
-    const saved = JSON.parse(localStorage.getItem("tanmatra_cart") || "[]");
-    const idx = saved.findIndex((c: any) => (c.itemId || c.menu_item_id) === id);
-    const entry = {
-      itemId: id,
-      qty,
-      name: item?.name,
-      price: item?.price,
-      veg: item?.is_vegetarian,
-      spiceLevel,
-      customizations,
-      instructions,
-    };
-    if (idx >= 0) saved[idx] = entry;
-    else saved.push(entry);
-    localStorage.setItem("tanmatra_cart", JSON.stringify(saved));
-    window.dispatchEvent(new Event("storage"));
-    setInCart(true);
+  const handleAddToCart = async () => {
+    if (!id) return;
+    const ok = await addToCartHook(id, qty);
+    if (ok) {
+      showToast("success", `${qty}x ${item?.name} added to cart`);
+    } else {
+      showToast("error", "Failed to add item");
+    }
   };
 
   if (loading) return <div className="text-center py-20 text-white/40 text-sm">Loading...</div>;
@@ -246,7 +231,7 @@ export default function DishPage() {
             <span className="text-sm font-semibold text-white w-6 text-center">{qty}</span>
             <button onClick={() => setQty(qty + 1)} className="p-1 text-[#D4AF37]"><Plus size={16} /></button>
           </div>
-          <button onClick={addToCart} className="flex-1 py-3 bg-[#D4AF37] text-[#0c0f0f] rounded-xl font-semibold text-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
+          <button onClick={handleAddToCart} className="flex-1 py-3 bg-[#D4AF37] text-[#0c0f0f] rounded-xl font-semibold text-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
             <ShoppingCart size={16} /> {inCart ? "Update Cart" : "Add to Cart"} · ₹{totalPrice}
           </button>
         </div>

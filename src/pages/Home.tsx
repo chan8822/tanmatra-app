@@ -1,194 +1,304 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Header } from "@/components/Header";
+import { BottomNav } from "@/components/BottomNav";
+import { FilterSheet } from "@/components/FilterSheet";
+import { QuickAccessTiles } from "@/components/QuickAccessTiles";
+import { DishCard } from "@/components/DishCard";
+import { SectionHeader } from "@/components/SectionHeader";
+import { SearchModal } from "@/components/SearchModal";
+import { LocationModal } from "@/components/LocationModal";
+import { SubscriptionSection, ComboOffersSection, GoldUpsellCard, LoyaltyExplainer } from "@/components/RevenueFeatures";
+import { useLocation } from "@/hooks/useLocation";
 import { API } from "@/lib/api";
-import { ShoppingCart, Heart, Shield, Sparkles } from "lucide-react";
+import {
+  MapPin, ChevronDown, Search, Wallet, User, Mic, Leaf, SlidersHorizontal,
+  Shield, Sparkles, Gift
+} from "lucide-react";
+
+const PROMO_BANNERS = [
+  { id: 1, title: "&#8377;100 OFF FIRST ORDER", subtitle: "Use code FIRST20 on your first order", cta: "Order now", image: "/dish/hm3.jpg" },
+  { id: 2, title: "ITEMS AT 50% OFF", subtitle: "On all healthy meals & salads this week", cta: "Claim now", image: "/dish/sa1.jpg" },
+  { id: 3, title: "SAVE &#8377;45 vs SWIGGY", subtitle: "Direct from kitchen, no aggregator markup", cta: "Compare", image: "/dish/bb1.jpg" },
+];
+
+const CATEGORY_PILLS = [
+  { id: "soups", name: "Soups", image: "/dish/s1.jpg" },
+  { id: "wraps", name: "Wraps", image: "/dish/w1.jpg" },
+  { id: "omelettes", name: "Omelettes", image: "/dish/o4.jpg" },
+  { id: "salads", name: "Salads", image: "/dish/sa1.jpg" },
+  { id: "sandwiches", name: "Sandwiches", image: "/dish/sw5.jpg" },
+  { id: "pasta", name: "Pasta", image: "/dish/p1.jpg" },
+  { id: "burrito-bowls", name: "Bowls", image: "/dish/bb1.jpg" },
+  { id: "healthy-meals", name: "Healthy", image: "/dish/hm3.jpg" },
+  { id: "breakfast", name: "Breakfast", image: "/dish/b1.jpg" },
+  { id: "meal-boxes", name: "Meals", image: "/dish/mb1.jpg" },
+  { id: "drinks", name: "Drinks", image: "/dish/d1.jpg" },
+  { id: "detox", name: "Detox", image: "/dish/de1.jpg" },
+  { id: "smoothies", name: "Smoothies", image: "/dish/sm5.jpg" },
+  { id: "desserts", name: "Desserts", image: "/dish/ds2.jpg" },
+];
+
+const FILTER_CHIPS = ["Filters", "Gourmet", "New to you", "Great offers", "Under 30 min", "Free delivery"];
 
 export default function Home() {
-  const [categories, setCategories] = useState<any[]>([]);
-  const [aiRecs, setAiRecs] = useState<any>(null);
+  const { activeLocation, selectLocation } = useLocation();
+  const [vegOnly, setVegOnly] = useState(false);
+  const [activeChip, setActiveChip] = useState(0);
+  const [currentBanner, setCurrentBanner] = useState(0);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [locationOpen, setLocationOpen] = useState(false);
+  const [dishes, setDishes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dishCount, setDishCount] = useState(83);
 
   useEffect(() => {
-    Promise.all([
-      API.categories().catch(() => []),
-      API.recommend().catch(() => null),
-    ]).then(([cats, recs]) => {
-      setCategories(cats);
-      setAiRecs(recs);
-    });
+    const load = async () => {
+      setLoading(true);
+      try {
+        const res = await API.items("all", undefined, 1, 12);
+        const items = res.items || res.data || [];
+        setDishes(items);
+        setDishCount(res.total || items.length);
+      } catch (e) {
+        console.error("[Home] Failed to load dishes:", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
   }, []);
 
-  return (
-    <div className="fade-in">
-      <Header title="Tanmatra" />
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentBanner((b) => (b + 1) % PROMO_BANNERS.length), 5000);
+    return () => clearInterval(timer);
+  }, []);
 
-      {/* Hero */}
-      <section className="relative h-[85vh] flex flex-col justify-end p-6 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[rgba(12,15,15,0.6)] to-[#0c0f0f] z-10" />
-        <div className="absolute inset-0 bg-gradient-to-br from-[rgba(212,175,55,0.15)] via-[#0c0f0f] to-[#0c0f0f]" />
-        <div className="relative z-20 space-y-6">
-          <div>
-            <h2 className="text-xs tracking-[0.25em] uppercase text-[#D4AF37] mb-3">Noida's Premium Kitchen</h2>
-            <h1 className="font-serif text-4xl leading-tight text-white">Culinary Precision.<br/><span className="text-[#D4AF37]">Artisanal Craft.</span></h1>
-          </div>
-          <p className="text-sm text-white/60 leading-relaxed max-w-[340px]">
-            RD-verified meals for your family&apos;s health tracks — Athlete, Junior, Senior, Everyday.
-          </p>
-          <div className="space-y-3">
-            <Link to="/menu" className="block w-full py-3.5 rounded-lg font-semibold text-sm tracking-wide bg-[#D4AF37] text-[#0c0f0f] text-center active:scale-[0.98] transition-transform">
-              Explore the Menu
+  const handleLocationSelect = async (loc: any) => {
+    await selectLocation(loc);
+  };
+
+  const cardDishes = dishes.slice(0, 8).map((d: any) => ({
+    id: String(d.id || d.sku),
+    name: d.name || d.dishName,
+    image: d.image || d.image_url || "/dish/hm3.jpg",
+    price: d.price || d.mrp || 0,
+    rating: d.rating || 4.0 + Math.random() * 0.8,
+    time: d.prep_time ? `${d.prep_time} min` : "25-30 min",
+    distance: "1.2 km",
+    deliveryFee: "Free",
+    offer: d.offer || (d.discount > 0 ? `&#8377;${Math.round(d.price * d.discount / 100)} OFF` : undefined),
+    tags: d.tags || [d.category?.name || "Healthy"],
+    veg: d.veg !== false,
+    cuisine: d.cuisine || d.category?.name || "Indian",
+    protein: d.protein || 0,
+    rdVerified: d.rd_verified || d.rdVerified || false,
+    discount: d.discount || 0,
+  }));
+
+  let filteredDishes = cardDishes;
+  if (vegOnly) filteredDishes = filteredDishes.filter((d) => d.veg);
+  if (activeChip === 1) {
+    const gourmet = filteredDishes.filter((d) => d.rating != null && d.rating >= 4.5);
+    filteredDishes = gourmet.length > 0 ? gourmet : filteredDishes;
+  }
+  if (activeChip === 2) {
+    const newest = filteredDishes.filter((d) => d.tags?.some((t: string) => ["New", "Fresh", "Recently Added", "Seasonal"].includes(t)));
+    filteredDishes = newest.length > 0 ? newest : filteredDishes;
+  }
+  if (activeChip === 3) {
+    const offers = filteredDishes.filter((d) => (d.discount || 0) > 0 || d.offer);
+    filteredDishes = offers.length > 0 ? offers : filteredDishes;
+  }
+  if (activeChip === 4) {
+    const quick = filteredDishes.filter((d) => {
+      const timeStr = String(d.time || "");
+      const timeNum = parseInt(timeStr.replace(/\D/g, ""));
+      return timeNum <= 30;
+    });
+    filteredDishes = quick.length > 0 ? quick : filteredDishes;
+  }
+  if (activeChip === 5) {
+    const freeDel = filteredDishes.filter((d) => d.deliveryFee === "Free");
+    filteredDishes = freeDel.length > 0 ? freeDel : filteredDishes;
+  }
+
+  return (
+    <div className="fade-in pb-20">
+      {/* Sticky Top Bar */}
+      <div className="sticky top-0 z-40 bg-[#121212] px-4 pt-3 pb-2 border-b border-white/5">
+        <div className="flex items-center justify-between">
+          <button onClick={() => setLocationOpen(true)} className="flex items-center gap-1.5 text-left min-w-0">
+            <MapPin size={18} className="text-[#D4AF37] shrink-0" />
+            <div className="min-w-0">
+              <div className="flex items-center gap-0.5">
+                <span className="text-sm font-bold text-white truncate max-w-[140px]">{activeLocation?.label || "Select Location"}</span>
+                <ChevronDown size={14} className="text-[#D4AF37] shrink-0" />
+              </div>
+              <p className="text-[10px] text-white/40 truncate max-w-[160px]">{activeLocation?.address || "Tap to select delivery zone"}</p>
+            </div>
+          </button>
+          <div className="flex items-center gap-2">
+            <Link to="/refer" className="flex items-center gap-1 px-2.5 py-1 bg-[#D4AF37]/10 rounded-full border border-[#D4AF37]/20">
+              <Wallet size={13} className="text-[#D4AF37]" />
+              <span className="text-[10px] font-semibold text-[#D4AF37]">&#8377;0</span>
             </Link>
-            <Link to="/wellness" className="block w-full py-3.5 rounded-lg font-semibold text-sm tracking-wide border border-[#D4AF37]/40 text-[#D4AF37] text-center hover:bg-[#D4AF37]/10 active:scale-[0.98] transition-transform">
-              Wellness Signature →
+            <Link to="/profile" className="w-8 h-8 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center">
+              <User size={15} className="text-[#D4AF37]" />
             </Link>
           </div>
         </div>
-      </section>
+        <div className="flex items-center gap-2 mt-3">
+          <button onClick={() => setSearchOpen(true)} className="flex-1 flex items-center gap-2 bg-[#1a1c1c] border border-white/10 rounded-lg px-3 py-2.5 text-left">
+            <Search size={16} className="text-white/30 shrink-0" />
+            <span className="text-sm text-white/40">Search dishes, segments...</span>
+            <span className="ml-auto text-white/20">|</span>
+            <Mic size={16} className="text-[#D4AF37] shrink-0" />
+          </button>
+          <button onClick={() => setVegOnly(!vegOnly)} className={`flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-semibold border transition-colors ${vegOnly ? "bg-green-500/15 border-green-500/30 text-green-400" : "bg-[#1a1c1c] border-white/10 text-white/40"}`}>
+            <Leaf size={14} /> VEG
+          </button>
+        </div>
+      </div>
 
-      {/* AI Recommendations */}
-      {aiRecs && (
-        <section className="px-6 py-10">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-serif text-xl text-[#D4AF37] flex items-center gap-2">
-              <Sparkles size={18} /> AI For You
-            </h2>
+      {/* Promo Banner */}
+      <div className="px-4 py-3">
+        <Link to="/menu" className="block relative h-36 rounded-xl overflow-hidden">
+          <img src={PROMO_BANNERS[currentBanner].image} alt="" className="absolute right-0 top-0 w-1/2 h-full object-cover opacity-40" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0c0f0f] via-[#0c0f0f]/85 to-transparent" />
+          <div className="relative z-10 p-4 h-full flex flex-col justify-center">
+            <div className="flex items-center gap-2 mb-1">
+              <p className="text-[10px] uppercase tracking-wider text-[#D4AF37]">Limited time</p>
+              <span className="text-[9px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded font-bold">Ends in 4h 32m</span>
+            </div>
+            <h3 className="text-lg font-bold text-white leading-tight">{PROMO_BANNERS[currentBanner].title}</h3>
+            <p className="text-xs text-white/60 mt-1">{PROMO_BANNERS[currentBanner].subtitle}</p>
+            <div className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#D4AF37] bg-[#D4AF37]/10 px-3 py-1.5 rounded-full w-fit">
+              {PROMO_BANNERS[currentBanner].cta} <span>&rsaquo;</span>
+            </div>
           </div>
-          <div className="space-y-3">
-            {(aiRecs.recommendations || []).slice(0, 3).map((r: any, i: number) => (
-              <Link key={i} to="/menu" className="block bg-[#1a1c1c] border border-white/5 rounded-xl p-3 active:bg-white/5 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[rgba(212,175,55,0.2)] to-[#0c0f0f] flex items-center justify-center text-xl">🍽️</div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold text-white">{r.dish}</h3>
-                    <p className="text-xs text-white/40">{r.reason}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#D4AF37]/10 text-[#D4AF37]">{r.category}</span>
-                      <span className="text-xs text-[#D4AF37]">₹{r.price}</span>
-                    </div>
-                  </div>
-                </div>
-              </Link>
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+            {PROMO_BANNERS.map((_, i) => (
+              <div key={i} className={`h-1 rounded-full transition-all ${i === currentBanner ? "w-4 bg-[#D4AF37]" : "w-1.5 bg-white/30"}`} />
             ))}
           </div>
-        </section>
-      )}
+        </Link>
+      </div>
 
-      {/* Why Tanmatra */}
-      <section className="px-6 py-10">
-        <h2 className="font-serif text-2xl text-[#D4AF37] mb-6">Why Tanmatra</h2>
-        <div className="space-y-4">
-          {[
-            { icon: <Shield size={20} />, title: "RD-Verified Nutrition", desc: "Every dish reviewed by registered dietitians for macro accuracy." },
-            { icon: <Heart size={20} />, title: "Per-Family Health Tracks", desc: "Athlete, Junior, Senior, Everyday — matched to each member." },
-            { icon: <ShoppingCart size={20} />, title: "Clinical Delivery", desc: "Tamper-proof packaging with RD cards. Priority riders." },
-          ].map((f, i) => (
-            <div key={i} className="bg-[#1a1c1c] border border-white/5 rounded-xl p-4 flex gap-4">
-              <div className="w-10 h-10 rounded-lg bg-[#D4AF37]/10 flex items-center justify-center shrink-0 text-[#D4AF37]">{f.icon}</div>
-              <div>
-                <h3 className="text-sm font-semibold text-white">{f.title}</h3>
-                <p className="text-xs text-white/50 leading-relaxed">{f.desc}</p>
+      {/* Category Pills */}
+      <div className="px-4 py-2">
+        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+          {CATEGORY_PILLS.map((cat) => (
+            <Link key={cat.id} to={`/menu?cat=${cat.id}`} className="flex flex-col items-center gap-1.5 shrink-0">
+              <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white/5">
+                <img src={cat.image} alt={cat.name} className="w-full h-full object-cover" />
               </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Collections */}
-      <section className="px-6 py-10">
-        <h2 className="font-serif text-2xl text-[#D4AF37] mb-6">Collections</h2>
-        <div className="space-y-4">
-          {(categories.length ? categories.slice(0, 6) : [
-            { id: "soups", name: "Soups", description: "Nutrient-dense soups" },
-            { id: "healthy-meals", name: "Healthy Meals", description: "Complete balanced meals" },
-            { id: "salads", name: "Salads", description: "RD-verified salads" },
-          ]).map((c: any) => (
-            <Link key={c.id} to="/menu" className="block relative h-32 rounded-xl overflow-hidden text-left">
-              <div className="absolute inset-0 bg-gradient-to-r from-[rgba(212,175,55,0.25)] to-[#0c0f0f]" />
-              <div className="absolute inset-0 flex items-end p-4">
-                <div>
-                  <h3 className="font-serif text-xl text-white">{c.name}</h3>
-                  <p className="text-xs text-white/60">{c.description || "Premium selection"}</p>
-                </div>
-                <span className="ml-auto mb-1 text-[#D4AF37] text-xl">›</span>
-              </div>
+              <span className="text-[10px] text-white/60 font-medium">{cat.name}</span>
             </Link>
           ))}
         </div>
-      </section>
+      </div>
 
-      {/* Quick Actions */}
-      <section className="px-6 py-6 space-y-3">
-        <h2 className="font-serif text-xl text-[#D4AF37] mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-2 gap-3">
-          <Link to="/subscriptions" className="p-3 bg-[#1a1c1c] border border-white/5 rounded-xl text-center">
-            <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/10 flex items-center justify-center mx-auto mb-1.5 text-[#D4AF37]">📅</div>
-            <span className="text-[10px] text-white/70">Subscriptions</span>
-          </Link>
-          <Link to="/refer" className="p-3 bg-[#1a1c1c] border border-white/5 rounded-xl text-center">
-            <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/10 flex items-center justify-center mx-auto mb-1.5 text-[#D4AF37]">🎁</div>
-            <span className="text-[10px] text-white/70">Refer & Earn</span>
-          </Link>
-          <Link to="/support" className="p-3 bg-[#1a1c1c] border border-white/5 rounded-xl text-center">
-            <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/10 flex items-center justify-center mx-auto mb-1.5 text-[#D4AF37]">💬</div>
-            <span className="text-[10px] text-white/70">Support</span>
-          </Link>
-          <Link to="/notifications" className="p-3 bg-[#1a1c1c] border border-white/5 rounded-xl text-center">
-            <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/10 flex items-center justify-center mx-auto mb-1.5 text-[#D4AF37]">🔔</div>
-            <span className="text-[10px] text-white/70">Notifications</span>
-          </Link>
+      {/* Filter Chips */}
+      <div className="px-4 py-2">
+        <div className="flex gap-2 overflow-x-auto no-scrollbar">
+          {FILTER_CHIPS.map((chip, i) => (
+            <button key={chip} onClick={() => { setActiveChip(i); if (i === 0) setFilterOpen(true); }}
+              className={`shrink-0 px-3 py-1.5 rounded-full text-[11px] border transition-colors ${activeChip === i ? "bg-[#D4AF37]/15 border-[#D4AF37]/40 text-[#D4AF37]" : "bg-[#1a1c1c] border-white/10 text-white/50"}`}>
+              {i === 0 && <SlidersHorizontal size={10} className="inline mr-1" />}{chip}
+            </button>
+          ))}
         </div>
-      </section>
+      </div>
 
-      {/* Tracks */}
-      <section className="px-6 py-10 space-y-3">
-        <h2 className="font-serif text-2xl text-[#D4AF37] mb-4">Your Track</h2>
-        {[
-          { label: "Athlete", to: "/track", color: "bg-[#D4AF37]/10 border-[#D4AF37]/30 text-[#D4AF37]" },
-          { label: "Junior", to: "/track", color: "bg-green-900/20 border-green-700/30 text-green-400" },
-          { label: "Senior", to: "/track", color: "bg-blue-900/20 border-blue-700/30 text-blue-400" },
-          { label: "Everyday", to: "/menu", color: "bg-white/5 border-white/10 text-white/70" },
-        ].map((t) => (
-          <Link key={t.label} to={t.to} className={`block border rounded-lg p-4 flex items-center justify-between ${t.color}`}>
-            <span className="text-sm font-medium">{t.label} Track</span>
-            <span>›</span>
-          </Link>
-        ))}
-      </section>
+      {/* Quick Access Tiles */}
+      <QuickAccessTiles />
 
-      {/* Savings */}
-      <section className="px-6 py-10">
-        <div className="bg-gradient-to-br from-green-900/20 to-[#1a1c1c] border border-green-500/10 rounded-xl p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-xl">💰</span>
-            <h2 className="font-serif text-lg text-[#D4AF37]">Your Savings Tracker</h2>
-          </div>
+      {/* Dish Count */}
+      <div className="px-4 pt-4 pb-1">
+        <p className="text-[10px] text-white/30 uppercase tracking-[0.2em]">{dishCount} DISHES DELIVERING TO YOU</p>
+      </div>
+
+      {/* Recommended For You */}
+      <div className="px-4 py-3">
+        <SectionHeader title="RECOMMENDED FOR YOU" seeAllTo="/menu" />
+        {loading ? (
           <div className="grid grid-cols-2 gap-3">
-            <div className="text-center p-3 bg-[rgba(12,15,15,0.5)] rounded-lg">
-              <div className="text-2xl font-bold text-green-400">₹1,240</div>
-              <div className="text-[10px] text-white/40">Saved this month</div>
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-[#1a1c1c] border border-white/5 rounded-xl overflow-hidden animate-pulse">
+                <div className="h-32 bg-white/5" />
+                <div className="p-2.5 space-y-2">
+                  <div className="h-3 bg-white/5 rounded w-3/4" />
+                  <div className="h-2.5 bg-white/5 rounded w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            {filteredDishes.map((dish) => <DishCard key={dish.id} dish={dish} />)}
+          </div>
+        )}
+      </div>
+
+      {/* Subscriptions */}
+      <SubscriptionSection />
+
+      {/* Combo Offers */}
+      <ComboOffersSection />
+
+      {/* Gold Upsell */}
+      <GoldUpsellCard />
+
+      {/* Newly Added */}
+      <div className="px-4 py-3">
+        <SectionHeader title="NEWLY ADDED" seeAllTo="/menu" subtext="Fresh from the Tanmatra kitchen" />
+        <div className="grid grid-cols-2 gap-3">
+          {filteredDishes.slice(0, 4).reverse().map((dish) => <DishCard key={`n-${dish.id}`} dish={{ ...dish, rdVerified: true }} />)}
+        </div>
+      </div>
+
+      {/* Loyalty Card */}
+      <div className="px-4 py-3">
+        <div className="relative p-4 bg-gradient-to-r from-[#2a2520] to-[#1a1c1c] border border-[#D4AF37]/20 rounded-xl overflow-hidden">
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles size={14} className="text-[#D4AF37]" />
+              <h3 className="text-sm font-bold text-[#D4AF37]">1 High-five</h3>
             </div>
-            <div className="text-center p-3 bg-[rgba(12,15,15,0.5)] rounded-lg">
-              <div className="text-2xl font-bold text-green-400">32%</div>
-              <div className="text-[10px] text-white/40">vs Aggregators</div>
+            <p className="text-xs text-white/60">Get a FREE meal after 4 High-fives</p>
+            <div className="flex items-center gap-2 mt-3">
+              {[1, 2, 3, 4].map((step) => (
+                <div key={step} className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${step === 1 ? "bg-green-500/20 border-green-500 text-green-400" : "bg-white/5 border-white/10 text-white/30"}`}>
+                  {step === 1 ? <span className="text-xs">&#10003;</span> : <span className="text-xs">{step}</span>}
+                </div>
+              ))}
+              <Gift size={20} className="text-[#D4AF37] ml-1" />
             </div>
           </div>
-          <p className="text-xs text-white/50 mt-3">Direct ordering saves ₹80-150 per meal. Subscription saves another 20%.</p>
-          <Link to="/orders" className="block mt-3 py-2.5 bg-green-500/10 border border-green-500/20 text-green-400 rounded-lg text-sm font-medium text-center">
-            View Savings Breakdown →
-          </Link>
+          <Sparkles size={60} className="absolute -right-2 -top-2 text-[#D4AF37]/5" />
         </div>
-      </section>
+      </div>
 
-      {/* Footer */}
-      <footer className="px-6 py-10 text-center border-t border-white/5">
-        <h3 className="font-serif text-sm tracking-[0.2em] uppercase text-[#D4AF37] mb-2">TANMATRA</h3>
-        <p className="text-xs text-white/30">Crafted for the discerning palate.</p>
-        <div className="flex justify-center gap-4 mt-4">
-          <Link to="/trust" className="text-xs text-white/40 hover:text-[#D4AF37]">Trust</Link>
-          <Link to="/menu" className="text-xs text-white/40 hover:text-[#D4AF37]">Menu</Link>
-          <Link to="/wellness" className="text-xs text-white/40 hover:text-[#D4AF37]">Wellness</Link>
+      <LoyaltyExplainer />
+
+      {/* Trust Footer */}
+      <div className="px-4 py-4">
+        <div className="flex items-center gap-3 p-3 bg-[#1a1c1c] border border-white/5 rounded-xl">
+          <div className="w-10 h-10 rounded-lg bg-[#D4AF37]/10 flex items-center justify-center text-[#D4AF37]">
+            <Shield size={18} />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-white">RD-Verified Nutrition</p>
+            <p className="text-[10px] text-white/40">Every dish reviewed by a Registered Dietitian</p>
+          </div>
         </div>
-      </footer>
+      </div>
+
+      <BottomNav />
+      <FilterSheet isOpen={filterOpen} onClose={() => setFilterOpen(false)} onApply={(f) => console.log(f)} />
+      <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+      <LocationModal isOpen={locationOpen} onClose={() => setLocationOpen(false)} onSelect={handleLocationSelect} />
     </div>
   );
 }

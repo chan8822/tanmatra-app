@@ -72,4 +72,58 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Tanmatra Custom Properties */
+  :root {
+    --bg-primary: #0c0f0f;
+    --bg-secondary: #1a1c1c;
+    --text-primary: #f9f9f9;
+    --text-secondary: rgba(255,255,255,0.6);
+    --gold: #D4AF37;
+    --gold-light: rgba(212,175,55,0.15);
+  }
+
+  .light {
+    --bg-primary: #f5f2ed;
+    --bg-secondary: #ffffff;
+    --text-primary: #1a1a1a;
+    --text-secondary: rgba(0,0,0,0.55);
+    --gold: #B8941F;
+    --gold-light: rgba(184,148,31,0.1);
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+  }
+}
+
+/* Animations */
+@keyframes scan {
+  0% { top: 10%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { top: 90%; opacity: 0; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.4s ease-out;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

@@ -18,8 +18,7 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("tanmatra_user") || "null");
-    API.listOrders(user?.id || 1)
+    API.listOrders()
       .then((data: any) => {
         setOrders(data.orders || data || []);
         setLoading(false);
