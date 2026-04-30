@@ -1,70 +1,57 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
-import { API } from "@/lib/api";
-import { Clock, ChevronRight, Package, Truck, CheckCircle, ChefHat } from "lucide-react";
-
-const statusConfig: Record<string, { icon: any; color: string; label: string }> = {
-  received: { icon: ChefHat, color: "text-blue-400", label: "Received" },
-  preparing: { icon: ChefHat, color: "text-yellow-400", label: "Preparing" },
-  quality_check: { icon: CheckCircle, color: "text-purple-400", label: "Quality Check" },
-  packed: { icon: Package, color: "text-orange-400", label: "Packed" },
-  out_for_delivery: { icon: Truck, color: "text-cyan-400", label: "Out for Delivery" },
-  delivered: { icon: CheckCircle, color: "text-green-400", label: "Delivered" },
-};
+import { orderStore } from "@/lib/store";
+import { ROUTES } from "@/lib/routes";
+import { p, timeAgo, statusLabel, statusColor } from "@/lib/format";
+import { Package } from "lucide-react";
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = useState(orderStore.getAll());
 
   useEffect(() => {
-    API.listOrders()
-      .then((data: any) => {
-        setOrders(data.orders || data || []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    setOrders(orderStore.getAll());
+    return orderStore.subscribe(() => setOrders(orderStore.getAll()));
   }, []);
 
   return (
-    <div className="fade-in pb-10">
-      <Header title="My Orders" backTo="/" />
+    <div className="min-h-screen bg-[#0a0a0a] text-white pb-6">
+      <Header title="My Orders" back={ROUTES.home} />
 
-      {loading ? (
-        <div className="text-center py-20 text-white/40 text-sm">Loading orders...</div>
-      ) : orders.length === 0 ? (
-        <div className="text-center py-20">
-          <Package size={48} className="text-white/10 mx-auto mb-4" />
-          <p className="text-white/40 text-sm mb-2">No orders yet</p>
-          <Link to="/menu" className="text-[#D4AF37] text-sm">Order your first meal</Link>
+      {orders.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
+          <Package size={40} className="text-white/10 mb-3" />
+          <p className="text-white/40 text-sm">No orders yet</p>
+          <Link to={ROUTES.menu} className="mt-4 text-sm text-[#D4AF37]">Browse Menu</Link>
         </div>
       ) : (
-        <div className="px-4 py-3 space-y-3">
-          {orders.map((o) => {
-            const cfg = statusConfig[o.status?.toLowerCase()] || statusConfig.received;
-            const Icon = cfg.icon;
-            return (
-              <Link key={o.id} to={`/order/${o.id}`} className="block bg-[#1a1c1c] border border-white/5 rounded-xl p-4 active:bg-white/5 transition-colors">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <p className="text-xs text-white/30">{o.id}</p>
-                    <p className="text-sm font-semibold text-white mt-0.5">{o.items?.length || 0} items · ₹{o.total_amount || o.total || 0}</p>
-                  </div>
-                  <div className={`flex items-center gap-1 text-xs ${cfg.color}`}>
-                    <Icon size={14} /> {cfg.label}
-                  </div>
-                </div>
-                <div className="flex items-center justify-between text-xs text-white/40">
-                  <div className="flex items-center gap-1">
-                    <Clock size={12} /> {new Date(o.created_at || o.createdAt || Date.now()).toLocaleDateString()}
-                  </div>
-                  <ChevronRight size={14} className="text-white/20" />
-                </div>
-              </Link>
-            );
-          })}
+        <div className="px-4 space-y-3 mt-3">
+          {orders.map((o) => (
+            <OrderCard key={o.id} order={o} />
+          ))}
         </div>
       )}
     </div>
+  );
+}
+
+function OrderCard({ order }: { order: any }) {
+  const navigate = useNavigate();
+
+  return (
+    <button onClick={() => navigate(ROUTES.track(order.id))} className="w-full text-left card p-4 active:scale-[0.98] transition-transform">
+      <div className="flex items-start justify-between mb-2">
+        <div>
+          <p className="text-sm font-semibold">Order {order.id}</p>
+          <p className="text-[10px] text-white/40">{timeAgo(order.createdAt)}</p>
+        </div>
+        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${statusColor(order.status)}`}>{statusLabel(order.status)}</span>
+      </div>
+      <p className="text-xs text-white/50 mb-2">{order.items?.length || 0} items &middot; {order.address}</p>
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-bold">{p(order.total)}</span>
+        <span className="text-[10px] text-[#D4AF37]">Track &rsaquo;</span>
+      </div>
+    </button>
   );
 }

@@ -1,184 +1,136 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, CheckCircle, Activity, Brain, Dumbbell, Salad, Heart } from "lucide-react";
+import { ArrowLeft, Brain, ChevronRight, CheckCircle, Target, Heart, Zap, Salad, RotateCcw } from "lucide-react";
+import { ROUTES } from "@/lib/routes";
 
-interface Question {
-  id: number;
-  question: string;
-  icon: any;
-  options: { label: string; segment: string }[];
-}
-
-const QUESTIONS: Question[] = [
+const questions = [
   {
-    id: 1,
-    question: "What is your primary health goal?",
-    icon: Activity,
+    q: "What's your primary health goal?",
     options: [
-      { label: "Build muscle & strength", segment: "athlete" },
-      { label: "Lose weight healthily", segment: "wellness" },
-      { label: "Manage a health condition", segment: "senior" },
-      { label: "Eat better daily", segment: "everyday" },
+      { label: "Lose weight", icon: Target, color: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/20" },
+      { label: "Build muscle", icon: Zap, color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20" },
+      { label: "Eat healthier", icon: Salad, color: "text-green-400", bg: "bg-green-500/10", border: "border-green-500/20" },
+      { label: "Manage a condition", icon: Heart, color: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/20" },
     ],
   },
   {
-    id: 2,
-    question: "How active are you?",
-    icon: Dumbbell,
+    q: "How active are you daily?",
     options: [
-      { label: "Daily gym/sports", segment: "athlete" },
-      { label: "Walk 3-4x a week", segment: "wellness" },
-      { label: "Light activity only", segment: "senior" },
-      { label: "Mostly sedentary", segment: "everyday" },
+      { label: "Sedentary", icon: Target, color: "text-white/50", bg: "bg-white/5", border: "border-white/10" },
+      { label: "Light activity", icon: Zap, color: "text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/20" },
+      { label: "Moderate exercise", icon: Salad, color: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/20" },
+      { label: "Very active", icon: Heart, color: "text-green-400", bg: "bg-green-500/10", border: "border-green-500/20" },
     ],
   },
   {
-    id: 3,
-    question: "Any dietary preference?",
-    icon: Salad,
+    q: "Any dietary preferences?",
     options: [
-      { label: "High protein", segment: "athlete" },
-      { label: "Low calorie", segment: "wellness" },
-      { label: "Low sodium/sugar", segment: "senior" },
-      { label: "No preference", segment: "everyday" },
+      { label: "No restrictions", icon: Target, color: "text-white/50", bg: "bg-white/5", border: "border-white/10" },
+      { label: "Vegetarian", icon: Salad, color: "text-green-400", bg: "bg-green-500/10", border: "border-green-500/20" },
+      { label: "Low carb", icon: Zap, color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20" },
+      { label: "High protein", icon: Heart, color: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/20" },
     ],
   },
   {
-    id: 4,
-    question: "How many meals do you eat out?",
-    icon: Brain,
+    q: "How many meals do you eat per day?",
     options: [
-      { label: "None — I cook", segment: "everyday" },
-      { label: "1-2 per week", segment: "wellness" },
-      { label: "3-5 per week", segment: "athlete" },
-      { label: "Almost daily", segment: "senior" },
+      { label: "2 meals", icon: Target, color: "text-white/50", bg: "bg-white/5", border: "border-white/10" },
+      { label: "3 meals", icon: Zap, color: "text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/20" },
+      { label: "3 + snacks", icon: Salad, color: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/20" },
+      { label: "5+ small meals", icon: Heart, color: "text-green-400", bg: "bg-green-500/10", border: "border-green-500/20" },
     ],
   },
 ];
 
-const SEGMENT_RESULTS: Record<string, { title: string; desc: string; dishes: string[] }> = {
-  athlete: {
-    title: "Athlete Track",
-    desc: "High-protein, performance-focused meals for active lifestyles.",
-    dishes: ["Grilled Chicken Protein Bowl", "Paneer Tikka Wrap", "Egg White Omelette"],
-  },
-  wellness: {
-    title: "Wellness Track",
-    desc: "Balanced, nutrient-dense meals for holistic health.",
-    dishes: ["Mediterranean Salad", "Detox Green Soup", "Quinoa Buddha Bowl"],
-  },
-  senior: {
-    title: "Senior Care Track",
-    desc: "Low-sodium, easy-digest meals with essential nutrients.",
-    dishes: ["Khichdi with Vegetables", "Dal Soup", "Soft Paneer Curry"],
-  },
-  everyday: {
-    title: "Everyday Balance",
-    desc: "Wholesome, affordable meals for daily nutrition.",
-    dishes: ["Veg Thali", "Chicken Wrap", "Dal Roti Combo"],
-  },
+const segments: Record<string, { title: string; desc: string; recs: string[] }> = {
+  "Lose weight": { title: "Weight Loss Track", desc: "Calorie-controlled, high-fiber meals to help you shed pounds sustainably.", recs: ["Grilled Chicken Salad", "Quinoa Bowl", "Detox Smoothie", "Zucchini Noodles"] },
+  "Build muscle": { title: "Muscle Gain Track", desc: "High-protein, nutrient-dense meals to fuel your workouts and recovery.", recs: ["Protein Wrap", "Grilled Chicken Bowl", "Egg White Omelette", "Greek Yogurt Parfait"] },
+  "Eat healthier": { title: "Balanced Wellness Track", desc: "Nutrient-rich, whole-food meals for overall health and vitality.", recs: ["Rainbow Salad", "Grilled Fish", "Mixed Veg Stir-fry", "Fruit Bowl"] },
+  "Manage a condition": { title: "Therapeutic Nutrition Track", desc: "Specialized meals designed for your specific health condition.", recs: ["Low-Sodium Soup", "Diabetic-Friendly Bowl", "Heart-Healthy Salad", "Anti-Inflammatory Smoothie"] },
 };
 
 export default function HealthQuizPage() {
   const navigate = useNavigate();
-  const [current, setCurrent] = useState(0);
+  const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
-  const [showResult, setShowResult] = useState(false);
 
-  const selectOption = (segment: string) => {
-    const next = [...answers, segment];
+  const select = (label: string) => {
+    const next = [...answers, label];
     setAnswers(next);
-    if (current < QUESTIONS.length - 1) {
-      setCurrent(current + 1);
+    if (step < questions.length - 1) {
+      setStep(step + 1);
     } else {
-      setShowResult(true);
-      // Save segment to localStorage
-      const counts: Record<string, number> = {};
-      next.forEach((s) => { counts[s] = (counts[s] || 0) + 1; });
-      const topSegment = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || "everyday";
-      localStorage.setItem("tanmatra_segment", topSegment);
+      setStep(step + 1);
     }
   };
 
-  if (showResult) {
-    const counts: Record<string, number> = {};
-    answers.forEach((s) => { counts[s] = (counts[s] || 0) + 1; });
-    const topSegment = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || "everyday";
-    const result = SEGMENT_RESULTS[topSegment];
+  const result = segments[answers[0]] || segments["Eat healthier"];
 
+  if (step >= questions.length) {
     return (
-      <div className="min-h-screen bg-[#121212] text-white flex flex-col items-center justify-center px-6 text-center fade-in pb-6">
-        <div className="w-20 h-20 rounded-full bg-[#D4AF37]/10 flex items-center justify-center mb-4">
-          <Heart size={36} className="text-[#D4AF37]" />
-        </div>
-        <p className="text-xs text-[#D4AF37] uppercase tracking-wider mb-2">Your Personalized Track</p>
-        <h2 className="text-2xl font-bold">{result.title}</h2>
-        <p className="text-sm text-white/60 mt-2 leading-relaxed">{result.desc}</p>
-
-        <div className="w-full max-w-xs mt-6 bg-[#1a1c1c] border border-white/5 rounded-xl p-4 text-left">
-          <p className="text-xs font-semibold text-white/60 mb-3 uppercase tracking-wider">Recommended for you</p>
-          {result.dishes.map((d) => (
-            <div key={d} className="flex items-center gap-2 py-2 border-b border-white/5 last:border-0">
-              <CheckCircle size={14} className="text-green-400 shrink-0" />
-              <span className="text-sm text-white">{d}</span>
-            </div>
-          ))}
+      <div className="min-h-screen bg-[#0a0a0a] text-white px-4 py-6 pb-24">
+        <div className="flex items-center gap-3 mb-6">
+          <button onClick={() => navigate(-1)} className="text-white/60"><ArrowLeft size={22} /></button>
+          <h1 className="text-base font-semibold">Your Plan</h1>
         </div>
 
-        <div className="w-full max-w-xs mt-6 space-y-3">
-          <button onClick={() => navigate("/menu")} className="w-full py-3 bg-[#D4AF37] text-[#0c0f0f] font-bold rounded-xl flex items-center justify-center gap-2">
-            Explore Your Menu <ChevronRight size={16} />
+        <div className="card p-5 text-center mb-4">
+          <div className="w-16 h-16 bg-[#D4AF37]/10 rounded-full flex items-center justify-center mx-auto mb-3">
+            <CheckCircle size={28} className="text-[#D4AF37]" />
+          </div>
+          <h2 className="text-lg font-bold mb-1">{result.title}</h2>
+          <p className="text-xs text-white/40">{result.desc}</p>
+        </div>
+
+        <div className="card p-4 mb-4">
+          <h3 className="text-sm font-semibold mb-3">Recommended For You</h3>
+          <div className="space-y-2">
+            {result.recs.map((r) => (
+              <div key={r} className="flex items-center gap-2 p-2 bg-[#141414] rounded-lg">
+                <Salad size={14} className="text-green-400" />
+                <span className="text-sm">{r}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <button onClick={() => { setStep(0); setAnswers([]); }} className="flex-1 btn-outline text-sm rounded-xl flex items-center justify-center gap-2">
+            <RotateCcw size={14} /> Retake
           </button>
-          <button onClick={() => navigate("/subscriptions")} className="w-full py-3 bg-white/5 text-white border border-white/10 rounded-xl text-sm">
-            View Meal Plans
-          </button>
-          <button onClick={() => { setShowResult(false); setCurrent(0); setAnswers([]); }} className="w-full text-xs text-white/30 py-2">
-            Retake Quiz
-          </button>
+          <button onClick={() => navigate(ROUTES.menu)} className="flex-1 btn-primary text-sm rounded-xl">Browse Menu</button>
         </div>
       </div>
     );
   }
 
-  const q = QUESTIONS[current];
-  const QIcon = q.icon;
+  const q = questions[step];
 
   return (
-    <div className="min-h-screen bg-[#121212] text-white fade-in flex flex-col">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-[#121212] border-b border-white/5 px-4 py-3 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="text-white/60"><ChevronLeft size={22} /></button>
-        <div className="flex-1">
-          <h1 className="text-base font-semibold">Health Quiz</h1>
-          <p className="text-[10px] text-white/40">Question {current + 1} of {QUESTIONS.length}</p>
-        </div>
+    <div className="min-h-screen bg-[#0a0a0a] text-white px-4 py-6">
+      <div className="flex items-center gap-3 mb-6">
+        <button onClick={() => step > 0 ? setStep(step - 1) : navigate(-1)} className="text-white/60"><ArrowLeft size={22} /></button>
+        <h1 className="text-base font-semibold">Health Quiz</h1>
+        <span className="ml-auto text-xs text-white/40">{step + 1}/{questions.length}</span>
       </div>
 
       {/* Progress */}
-      <div className="px-4 pt-4">
-        <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-          <div className="h-full bg-[#D4AF37] rounded-full transition-all" style={{ width: `${((current + 1) / QUESTIONS.length) * 100}%` }} />
-        </div>
+      <div className="h-1 bg-white/10 rounded-full mb-6 overflow-hidden">
+        <div className="h-full bg-[#D4AF37] rounded-full transition-all" style={{ width: `${((step + 1) / questions.length) * 100}%` }} />
       </div>
 
-      {/* Question */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6">
-        <div className="w-16 h-16 rounded-full bg-[#D4AF37]/10 flex items-center justify-center mb-4">
-          <QIcon size={28} className="text-[#D4AF37]" />
-        </div>
-        <h2 className="text-lg font-bold text-center leading-snug">{q.question}</h2>
+      <h2 className="text-lg font-bold mb-4">{q.q}</h2>
 
-        <div className="w-full max-w-xs mt-6 space-y-2.5">
-          {q.options.map((opt) => (
-            <button
-              key={opt.label}
-              onClick={() => selectOption(opt.segment)}
-              className="w-full p-3.5 bg-[#1a1c1c] border border-white/5 rounded-xl text-left text-sm text-white/80 hover:bg-white/5 hover:border-[#D4AF37]/30 active:scale-[0.98] transition-all"
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
+      <div className="space-y-2.5">
+        {q.options.map((opt) => (
+          <button key={opt.label} onClick={() => select(opt.label)} className={`w-full flex items-center gap-3 p-4 rounded-xl border text-left transition-colors ${opt.bg} ${opt.border} hover:brightness-110 active:scale-[0.98]`}>
+            <div className={`w-10 h-10 rounded-lg ${opt.bg} flex items-center justify-center`}>
+              <opt.icon size={18} className={opt.color} />
+            </div>
+            <span className="text-sm font-medium">{opt.label}</span>
+            <ChevronRight size={14} className="text-white/20 ml-auto" />
+          </button>
+        ))}
       </div>
     </div>
   );

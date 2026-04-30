@@ -1,162 +1,79 @@
-import { useState, useEffect, useRef } from "react";
-import { Send, Phone, Clock, User, Bot, ArrowRight } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, HelpCircle, MessageCircle, Mail, Phone, ChevronRight, Search, FileText, Shield } from "lucide-react";
 
-const QUICK_TOPICS = [
-  { label: "Order Delay", response: "I understand your concern about the delivery time. Let me check the live tracking for your order and update you immediately." },
-  { label: "Wrong Item", response: "I'm sorry for the mix-up. Please share your order ID and a photo of what you received. We'll resend the correct item within 30 minutes." },
-  { label: "Refund Status", response: "Refunds typically process within 5-7 business days to your original payment method. Would you like me to escalate this for faster processing?" },
-  { label: "Subscription", response: "I can help you pause, modify, or cancel your subscription. What would you like to do?" },
-  { label: "Nutrition Info", response: "All our dishes have RD-verified nutrition cards. I can send you the detailed macro breakdown for any dish you've ordered." },
-  { label: "Speak to Human", response: "ESCALATE_HUMAN" },
+const faqs = [
+  { q: "How do I track my order?", a: "Go to Orders tab and tap on any active order to see real-time tracking." },
+  { q: "Can I modify my order after placing it?", a: "You can modify within 5 minutes of placing. Contact support for urgent changes." },
+  { q: "What is RD Verified?", a: "Every dish is approved by our registered dietitians for nutritional accuracy." },
+  { q: "How does Tanmatra Gold work?", a: "Subscribe to save 20% on every order + free delivery + priority support." },
+  { q: "Do you offer corporate meal plans?", a: "Yes! Contact us at corporate@tanmatra.com for bulk meal packages." },
 ];
 
 export default function SupportPage() {
-  const [messages, setMessages] = useState<{ from: "user" | "bot" | "human"; text: string; time: string }[]>([
-    { from: "bot", text: "Hello! I'm your Tanmatra support assistant. How can I help you today?", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
-  ]);
-  const [input, setInput] = useState("");
-  const [typing, setTyping] = useState(false);
-  const [humanMode, setHumanMode] = useState(false);
-  const [humanTyping, setHumanTyping] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const [open, setOpen] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
 
-  useEffect(() => { scrollRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
-
-  const sendMessage = (text: string) => {
-    if (!text.trim()) return;
-    const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    setMessages((prev) => [...prev, { from: "user", text, time }]);
-    setInput("");
-
-    if (humanMode) {
-      setHumanTyping(true);
-      setTimeout(() => {
-        setMessages((prev) => [...prev, { from: "human", text: "Thanks for your patience. I'm reviewing your case and will get back to you within 2 minutes.", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
-        setHumanTyping(false);
-      }, 2000);
-      return;
-    }
-
-    const found = QUICK_TOPICS.find((t) => text.toLowerCase().includes(t.label.toLowerCase()));
-
-    if (found?.response === "ESCALATE_HUMAN") {
-      setTyping(true);
-      setTimeout(() => {
-        setMessages((prev) => [...prev, { from: "bot", text: "I'm connecting you to a support specialist now. Expected wait time: 2 minutes. Please hold...", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
-        setTyping(false);
-        setTimeout(() => {
-          setHumanMode(true);
-          setMessages((prev) => [...prev, { from: "human", text: "Hi! I'm Rahul from Tanmatra support. I see you need assistance. How can I help you today?", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
-        }, 2000);
-      }, 1500);
-      return;
-    }
-
-    setTyping(true);
-    setTimeout(() => {
-      const response = found?.response || "Thanks for reaching out. I've noted your concern. A support specialist will follow up within 15 minutes. Is there anything else I can help with?";
-      setMessages((prev) => [...prev, { from: "bot", text: response, time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
-      setTyping(false);
-    }, 1500);
-  };
+  const filtered = faqs.filter((f) => f.q.toLowerCase().includes(search.toLowerCase()) || f.a.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div className="fade-in flex flex-col h-screen pb-20">
-      <header className="sticky top-0 z-50 bg-[#0c0f0f]/90 backdrop-blur-md border-b border-white/5 px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <a href="#/" className="p-1.5 -ml-1.5 text-white/60">←</a>
-            <h1 className="text-base font-semibold text-white">Support</h1>
-          </div>
-          {humanMode && (
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-green-500/10 border border-green-500/20 rounded-full">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-[10px] text-green-400">Human Agent</span>
-            </div>
-          )}
-        </div>
-      </header>
+    <div className="min-h-screen bg-[#0a0a0a] text-white pb-6">
+      <div className="sticky top-0 z-50 bg-[#0a0a0a]/95 backdrop-blur-md border-b border-white/5 px-4 py-3 flex items-center gap-3">
+        <button onClick={() => navigate(-1)} className="text-white/60"><ArrowLeft size={22} /></button>
+        <HelpCircle size={20} className="text-[#D4AF37]" />
+        <h1 className="text-base font-semibold">Help & Support</h1>
+      </div>
 
-      {/* Quick topics */}
-      {!humanMode && (
-        <div className="px-4 py-2 flex gap-2 overflow-x-auto no-scrollbar border-b border-white/5">
-          {QUICK_TOPICS.slice(0, 5).map((t) => (
-            <button key={t.label} onClick={() => sendMessage(t.label)} className="shrink-0 px-3 py-1.5 bg-[#1a1c1c] border border-white/10 rounded-full text-[10px] text-white/60">
-              {t.label}
-            </button>
-          ))}
-          <button onClick={() => sendMessage("Speak to Human")} className="shrink-0 px-3 py-1.5 bg-red-500/10 border border-red-500/20 rounded-full text-[10px] text-red-400 flex items-center gap-1">
-            <User size={10} /> Human
+      {/* Search */}
+      <div className="px-4 py-3">
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search FAQs..." className="w-full pl-9 pr-3 py-2.5 bg-[#141414] border border-white/10 rounded-xl text-sm placeholder:text-white/30 outline-none" />
+        </div>
+      </div>
+
+      {/* Contact Cards */}
+      <div className="px-4 grid grid-cols-2 gap-2 mb-4">
+        <div className="card p-3 text-center">
+          <MessageCircle size={18} className="text-green-400 mx-auto mb-1" />
+          <p className="text-xs font-medium">Chat</p>
+          <p className="text-[10px] text-white/40">Typically replies in 2 min</p>
+        </div>
+        <div className="card p-3 text-center">
+          <Phone size={18} className="text-blue-400 mx-auto mb-1" />
+          <p className="text-xs font-medium">Call</p>
+          <p className="text-[10px] text-white/40">+91-9876543200</p>
+        </div>
+      </div>
+
+      {/* FAQs */}
+      <div className="px-4 space-y-2">
+        <h3 className="text-xs font-bold text-white/40 uppercase mb-2">Frequently Asked</h3>
+        {filtered.map((f, i) => (
+          <button key={i} onClick={() => setOpen(open === i ? null : i)} className="w-full card p-3 text-left">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">{f.q}</span>
+              <ChevronRight size={14} className={`text-white/20 shrink-0 transition-transform ${open === i ? "rotate-90" : ""}`} />
+            </div>
+            {open === i && <p className="text-xs text-white/50 mt-2 leading-relaxed">{f.a}</p>}
           </button>
-        </div>
-      )}
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-        {messages.map((m, i) => (
-          <div key={i} className={`flex ${m.from === "user" ? "justify-end" : "justify-start"}`}>
-            <div className={`max-w-[80%] p-3 rounded-xl text-xs ${
-              m.from === "user" ? "bg-[#D4AF37] text-[#0c0f0f] rounded-br-none" :
-              m.from === "human" ? "bg-green-500/10 border border-green-500/20 text-white/80 rounded-bl-none" :
-              "bg-[#1a1c1c] border border-white/5 text-white/80 rounded-bl-none"
-            }`}>
-              <div className="flex items-center gap-1 mb-1">
-                {m.from === "bot" && <Bot size={10} className="text-[#D4AF37]" />}
-                {m.from === "human" && <User size={10} className="text-green-400" />}
-                <span className={`text-[9px] ${m.from === "human" ? "text-green-400" : m.from === "bot" ? "text-[#D4AF37]" : "text-[#0c0f0f]/50"}`}>
-                  {m.from === "user" ? "You" : m.from === "human" ? "Rahul (Support)" : "Tanmatra Bot"}
-                </span>
-              </div>
-              <p className="leading-relaxed">{m.text}</p>
-              <p className={`text-[9px] mt-1 ${m.from === "user" ? "text-[#0c0f0f]/50" : "text-white/30"}`}>{m.time}</p>
-            </div>
-          </div>
         ))}
-        {typing && (
-          <div className="flex justify-start">
-            <div className="bg-[#1a1c1c] border border-white/5 rounded-xl rounded-bl-none p-3">
-              <div className="flex gap-1">
-                <span className="w-2 h-2 bg-white/30 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                <span className="w-2 h-2 bg-white/30 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                <span className="w-2 h-2 bg-white/30 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-              </div>
-            </div>
-          </div>
-        )}
-        {humanTyping && (
-          <div className="flex justify-start">
-            <div className="bg-green-500/10 border border-green-500/20 rounded-xl rounded-bl-none p-3 flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-green-500/20 flex items-center justify-center">
-                <User size={10} className="text-green-400" />
-              </div>
-              <span className="text-[10px] text-green-400">Rahul is typing...</span>
-            </div>
-          </div>
-        )}
-        <div ref={scrollRef} />
+        {filtered.length === 0 && <p className="text-sm text-white/30 text-center py-4">No results found</p>}
       </div>
 
-      {/* Human escalation banner */}
-      {!humanMode && messages.length > 3 && (
-        <div className="px-4 py-2">
-          <button onClick={() => sendMessage("Speak to Human")} className="w-full py-2.5 bg-gradient-to-r from-red-500/10 to-[#1a1c1c] border border-red-500/20 rounded-xl text-xs text-red-400 flex items-center justify-center gap-2">
-            <User size={14} /> Not satisfied? Chat with a human <ArrowRight size={12} />
-          </button>
+      {/* Links */}
+      <div className="px-4 mt-4 space-y-2">
+        <div className="flex items-center gap-3 p-3 card">
+          <FileText size={16} className="text-white/40" />
+          <span className="text-sm">Terms of Service</span>
+          <ChevronRight size={14} className="text-white/20 ml-auto" />
         </div>
-      )}
-
-      {/* Input */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0c0f0f] border-t border-white/5 z-40">
-        <div className="flex gap-2 max-w-[450px] mx-auto">
-          <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendMessage(input)} placeholder={humanMode ? "Type to Rahul..." : "Type your message..."} className="flex-1 px-3 py-2.5 bg-[#1a1c1c] border border-white/10 rounded-lg text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#D4AF37]/50" />
-          <button onClick={() => sendMessage(input)} className="p-2.5 bg-[#D4AF37] text-[#0c0f0f] rounded-lg"><Send size={18} /></button>
+        <div className="flex items-center gap-3 p-3 card">
+          <Shield size={16} className="text-white/40" />
+          <span className="text-sm">Privacy Policy</span>
+          <ChevronRight size={14} className="text-white/20 ml-auto" />
         </div>
-      </div>
-
-      {/* Contact options */}
-      <div className="px-4 py-2 flex gap-2 border-t border-white/5">
-        <a href="tel:+919876543210" className="flex-1 py-2 bg-[#1a1c1c] border border-white/5 rounded-lg text-xs text-white/60 flex items-center justify-center gap-1.5"><Phone size={12} /> Call Us</a>
-        <div className="flex-1 py-2 bg-[#1a1c1c] border border-white/5 rounded-lg text-xs text-white/60 flex items-center justify-center gap-1.5"><Clock size={12} /> 9 AM - 11 PM</div>
       </div>
     </div>
   );

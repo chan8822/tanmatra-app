@@ -1,27 +1,14 @@
 import { useState, useEffect } from "react";
 
-type Theme = "dark" | "light" | "system";
-
 export function useTheme() {
-  const [theme, setTheme] = useState<Theme>(() => {
-    return (localStorage.getItem("tanmatra_theme") as Theme) || "dark";
-  });
-
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
   useEffect(() => {
-    const root = document.documentElement;
-    const isDark =
-      theme === "dark" ||
-      (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-
-    if (isDark) {
-      root.classList.add("dark");
-      root.classList.remove("light");
-    } else {
-      root.classList.add("light");
-      root.classList.remove("dark");
-    }
-    localStorage.setItem("tanmatra_theme", theme);
-  }, [theme]);
-
-  return { theme, setTheme };
+    const saved = localStorage.getItem("tanmatra_theme");
+    if (saved === "light" || saved === "dark") setTheme(saved);
+  }, []);
+  const update = (t: "dark" | "light") => {
+    setTheme(t);
+    localStorage.setItem("tanmatra_theme", t);
+  };
+  return { theme, setTheme: update };
 }

@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "test:contracts": "node src/tests/build-contracts.cjs",
+    "build": "node src/tests/build-contracts.cjs && tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },

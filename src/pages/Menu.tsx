@@ -1,174 +1,160 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Header } from "@/components/Header";
-import { API } from "@/lib/api";
-import { categories } from "@/data/menu";
-import { Search, Plus, Minus, ShoppingCart, SlidersHorizontal, ChevronRight, Leaf, Flame, X } from "lucide-react";
+import { menuItems, categories } from "@/data/menu";
+import { ROUTES } from "@/lib/routes";
+import { TILE_FILTERS, TILE_META, normalizeItem } from "@/lib/filters";
+import { p } from "@/lib/format";
+import { cartStore } from "@/lib/store";
+import { Search, Plus, Minus, X, AlertCircle, Gift, Zap, Salad, Shield, Users, Target } from "lucide-react";
 
-const filterLabels: Record<string, string> = {
-  offers: "All Offers",
-  quick: "Quick Meals (< 15 min)",
-  wellness: "Wellness Picks",
-  rdverified: "RD Verified",
-  family: "Family Meals",
-  segment: "Your Segment",
-};
+const iconMap: Record<string, React.ElementType> = { gift: Gift, zap: Zap, salad: Salad, shield: Shield, users: Users, target: Target };
 
 export default function MenuPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [items, setItems] = useState<any[]>([]);
+  const [search, setSearch] = useState(searchParams.get("search") || "");
   const [activeCat, setActiveCat] = useState(searchParams.get("cat") || "all");
-  const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [cart, setCart] = useState<Record<string, number>>({});
-  const [showFilters, setShowFilters] = useState(false);
   const [vegOnly, setVegOnly] = useState(false);
-
+  const [cart, setCart] = useState<Record<string, number>>({});
   const urlFilter = searchParams.get("filter");
 
   useEffect(() => {
-    Promise.all([API.items(), API.categories()])
-      .then(([it, _cats]) => {
-        setItems(it.items || it || []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-    const saved = JSON.parse(localStorage.getItem("tanmatra_cart") || "[]");
-    const map: Record<string, number> = {};
-    saved.forEach((c: any) => { map[c.itemId || c.menu_item_id] = c.qty || c.quantity; });
-    setCart(map);
+    syncCart();
+    return cartStore.subscribe(syncCart);
   }, []);
 
-  const filtered = useMemo(() => {
-    let list = items;
-    if (urlFilter) {
-      switch (urlFilter) {
-        case "offers": list = list.filter((i) => (i.discount || 0) > 0); break;
-        case "quick": list = list.filter((i) => (i.prep_time || 30) <= 15); break;
-        case "wellness": list = list.filter((i) => (i.tags || []).some((t: string) => ["Low Cal", "Keto", "Vit C", "Immunity", "Detox"].includes(t))); break;
-        case "rdverified": list = list.filter((i) => i.rd_verified || i.is_rd_verified); break;
-        case "family": list = list.filter((i) => (i.price || 0) > 200); break;
-        case "segment": list = list.filter((i) => (i.protein || 0) > 15); break;
-      }
-    }
-    if (activeCat !== "all") list = list.filter((i) => i.category_id === activeCat || i.category?.id === activeCat);
-    if (search.trim()) list = list.filter((i) => i.name?.toLowerCase().includes(search.toLowerCase()));
-    if (vegOnly) list = list.filter((i) => i.is_vegetarian);
+  function syncCart() {
+    const c = cartStore.get();
+    const map: Record<string, number> = {};
+    c.items.forEach((i) => { map[i.id] = i.qty; });
+    setCart(map);
+  }
+
+  const normalized = useMemo(() => menuItems.map(normalizeItem), []);
+
+  const baseFiltered = useMemo(() => {
+    let list = [...normalized];
+    if (urlFilter && TILE_FILTERS[urlFilter]) list = list.filter(TILE_FILTERS[urlFilter]);
+    if (activeCat !== "all") list = list.filter((i) => i.category_id === activeCat);
+    if (search.trim()) list = list.filter((i) => i.name.toLowerCase().includes(search.toLowerCase()));
     return list;
-  }, [items, activeCat, search, vegOnly, urlFilter]);
+  }, [normalized, activeCat, search, urlFilter]);
 
-  const clearFilter = () => { searchParams.delete("filter"); searchParams.delete("cat"); setSearchParams(searchParams); setActiveCat("all"); };
+  const filtered = useMemo(() => {
+    if (vegOnly) return baseFiltered.filter((i) => i.is_vegetarian);
+    return baseFiltered;
+  }, [baseFiltered, vegOnly]);
 
-  const addToCart = (item: {id: string}, delta: number) => {
-    const id = item.id;
-    const current = cart[id] || 0;
-    const next = Math.max(0, current + delta);
-    const updated: Record<string, number> = { ...cart, [id]: next };
-    if (next === 0) delete updated[id];
-    setCart(updated);
-    const saved = Object.entries(updated).map(([itemId, qty]) => {
-      const it = items.find((x) => x.id === itemId);
-      return { itemId, qty, name: it?.name, price: it?.price, veg: it?.is_vegetarian };
-    });
-    localStorage.setItem("tanmatra_cart", JSON.stringify(saved));
-    window.dispatchEvent(new Event("storage"));
+  const nonVegCount = baseFiltered.filter((i) => !i.is_vegetarian).length;
+  const bannerMeta = urlFilter ? TILE_META[urlFilter] : null;
+  const BannerIcon = bannerMeta ? (iconMap[bannerMeta.iconName] || Gift) : null;
+
+  const clearFilter = () => {
+    const sp = new URLSearchParams(searchParams);
+    sp.delete("filter");
+    setSearchParams(sp);
+    setActiveCat("all");
   };
 
-  const getImage = (item: any) => {
-    const cat = categories.find((c) => c.id === item.category_id);
-    return item.image || cat?.image || `/dish/${item.id}.jpg`;
+  const addToCart = (item: any) => {
+    cartStore.addItem({ id: item.id, name: item.name, price: item.price, image: item.image, isVeg: item.is_vegetarian });
+    syncCart();
+  };
+
+  const updateQty = (id: string, delta: number) => {
+    cartStore.updateQty(id, (cart[id] || 0) + delta);
+    syncCart();
   };
 
   return (
-    <div className="fade-in pb-24">
-      <Header title="Menu" backTo="/" />
+    <div className="min-h-screen bg-[#0a0a0a] text-white pb-24">
+      <Header title={bannerMeta ? bannerMeta.title : "Menu"} back={ROUTES.home} />
 
-      {/* Search */}
-      <div className="px-4 py-3 sticky top-12 z-20 bg-[#0c0f0f]">
-        <div className="flex gap-2">
-          <div className="flex-1 relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search 83 RD-verified dishes..." className="w-full pl-9 pr-3 py-2.5 bg-[#1a1c1c] border border-white/10 rounded-lg text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#D4AF37]/50" />
+      {/* Filter Banner */}
+      {bannerMeta && BannerIcon && (
+        <div className={`mx-4 mt-3 p-4 bg-gradient-to-r ${bannerMeta.gradient} border ${bannerMeta.border} rounded-2xl flex items-start gap-3`}>
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-white/5`}>
+            <BannerIcon size={20} className={bannerMeta.text} />
           </div>
-          <button onClick={() => setShowFilters(!showFilters)} className="p-2.5 bg-[#1a1c1c] border border-white/10 rounded-lg text-white/60"><SlidersHorizontal size={18} /></button>
-        </div>
-        {showFilters && (
-          <div className="mt-2 p-3 bg-[#1a1c1c] border border-white/10 rounded-lg flex items-center gap-3">
-            <label className="flex items-center gap-2 text-sm text-white/70 cursor-pointer">
-              <input type="checkbox" checked={vegOnly} onChange={(e) => setVegOnly(e.target.checked)} className="accent-[#D4AF37]" />
-              <Leaf size={14} className="text-green-400" /> Vegetarian Only
-            </label>
-            <button onClick={() => { setActiveCat("all"); setVegOnly(false); setSearch(""); clearFilter(); }} className="text-xs text-[#D4AF37] ml-auto">Reset</button>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className={`text-sm font-bold ${bannerMeta.text}`}>{bannerMeta.title}</h2>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full border ${bannerMeta.border} ${bannerMeta.text}`}>{filtered.length} items</span>
+            </div>
+            <p className="text-[11px] text-white/50 mt-0.5">{bannerMeta.subtitle}</p>
           </div>
-        )}
-      </div>
-
-      {/* Active filter banner */}
-      {urlFilter && (
-        <div className="mx-4 mt-2 p-3 bg-[#D4AF37]/10 border border-[#D4AF37]/30 rounded-xl flex items-center justify-between">
-          <span className="text-xs font-medium text-[#D4AF37]">{filterLabels[urlFilter] || "Filtered"}</span>
-          <button onClick={clearFilter} className="flex items-center gap-1 text-[10px] text-white/40 hover:text-white"><X size={12} /> Clear</button>
+          <button onClick={clearFilter} className="shrink-0 p-1.5 rounded-lg bg-white/5 hover:bg-white/10"><X size={14} className="text-white/40" /></button>
         </div>
       )}
 
+      {/* Veg conflict chip */}
+      {vegOnly && filtered.length < 3 && nonVegCount > 0 && (
+        <div className="mx-4 mt-2 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl flex items-center gap-3">
+          <AlertCircle size={16} className="text-yellow-400 shrink-0" />
+          <div className="flex-1">
+            <p className="text-xs text-yellow-400 font-medium">{nonVegCount} non-veg items hidden</p>
+            <p className="text-[10px] text-white/40">Toggle Veg off to see more results</p>
+          </div>
+          <button onClick={() => setVegOnly(false)} className="shrink-0 px-3 py-1.5 bg-yellow-500/15 border border-yellow-500/30 rounded-lg text-[10px] font-semibold text-yellow-400">Show All</button>
+        </div>
+      )}
+
+      {/* Search */}
+      <div className="px-4 py-3">
+        <div className="relative">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search dishes..." className="w-full pl-9 pr-3 py-2.5 bg-[#141414] border border-white/10 rounded-xl text-sm placeholder:text-white/30 outline-none focus:border-[#D4AF37]/50" />
+        </div>
+      </div>
+
+      {/* Veg toggle */}
+      <div className="px-4 pb-2 flex items-center gap-2">
+        <button onClick={() => setVegOnly(!vegOnly)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${vegOnly ? "bg-green-500/15 border-green-500/30 text-green-400" : "bg-[#141414] border-white/10 text-white/50"}`}>
+          <div className={`w-3 h-3 border rounded-sm flex items-center justify-center ${vegOnly ? "border-green-500" : "border-white/30"}`}>{vegOnly && <div className="w-1.5 h-1.5 bg-green-500 rounded-sm" />}</div>
+          Veg Only
+        </button>
+      </div>
+
       {/* Category chips */}
       <div className="px-4 py-2 flex gap-2 overflow-x-auto no-scrollbar">
-        <button onClick={() => setActiveCat("all")} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border ${activeCat === "all" ? "bg-[#D4AF37] text-[#0c0f0f] border-[#D4AF37]" : "bg-[#1a1c1c] text-white/60 border-white/10"}`}>All</button>
+        <button onClick={() => setActiveCat("all")} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeCat === "all" ? "bg-[#D4AF37] text-[#0a0a0a] border-[#D4AF37]" : "bg-[#141414] text-white/50 border-white/10"}`}>All</button>
         {categories.map((c) => (
-          <button key={c.id} onClick={() => setActiveCat(c.id)} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border ${activeCat === c.id ? "bg-[#D4AF37] text-[#0c0f0f] border-[#D4AF37]" : "bg-[#1a1c1c] text-white/60 border-white/10"}`}>{c.name}</button>
+          <button key={c.id} onClick={() => setActiveCat(c.id)} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeCat === c.id ? "bg-[#D4AF37] text-[#0a0a0a] border-[#D4AF37]" : "bg-[#141414] text-white/50 border-white/10"}`}>{c.name}</button>
         ))}
       </div>
 
       {/* Items */}
-      {loading ? (
-        <div className="px-4 py-10 text-center text-white/40 text-sm">Loading menu...</div>
-      ) : filtered.length === 0 ? (
-        <div className="px-4 py-10 text-center text-white/40 text-sm">No dishes found.</div>
-      ) : (
-        <div className="px-4 space-y-3 mt-2">
-          {filtered.map((item) => (
-            <div key={item.id} className="bg-[#1a1c1c] border border-white/5 rounded-xl overflow-hidden flex gap-3">
-              <Link to={`/dish/${item.id}`} className="w-24 h-24 shrink-0 relative overflow-hidden rounded-l-xl">
-                <img src={getImage(item)} alt={item.name} className="w-full h-full object-cover" loading="lazy" />
+      <div className="px-4 space-y-3 mt-2">
+        {filtered.map((item) => (
+          <div key={item.id} className="bg-[#141414] border border-white/5 rounded-xl overflow-hidden flex gap-3">
+            <Link to={ROUTES.dish(item.id)} className="w-24 h-24 shrink-0 relative overflow-hidden rounded-l-xl">
+              <img src={item.image || `/dish/${item.id}.jpg`} alt={item.name} className="w-full h-full object-cover" loading="lazy" />
+              {item.discount > 0 && <div className="absolute top-1 left-1 bg-[#E23744] text-white text-[8px] font-bold px-1.5 py-0.5 rounded">{item.discount}% OFF</div>}
+            </Link>
+            <div className="flex-1 min-w-0 py-2 pr-2">
+              <Link to={ROUTES.dish(item.id)}>
+                <h3 className="text-sm font-semibold truncate">{item.name}</h3>
               </Link>
-              <div className="flex-1 min-w-0 py-2 pr-2">
-                <Link to={`/dish/${item.id}`}>
-                  <div className="flex items-center gap-1.5">
-                    <h3 className="text-sm font-semibold text-white truncate">{item.name}</h3>
-                    {item.is_vegetarian ? <Leaf size={10} className="text-green-400 shrink-0" /> : <Flame size={10} className="text-red-400 shrink-0" />}
+              <p className="text-[10px] text-white/40 mt-0.5">{item.calories || 0} kcal &middot; {item.protein || 0}g protein</p>
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-sm font-bold text-[#D4AF37]">{p(item.price)}</span>
+                {cart[item.id] ? (
+                  <div className="flex items-center gap-2 bg-[#0a0a0a] border border-white/10 rounded-lg">
+                    <button onClick={() => updateQty(item.id, -1)} className="p-1.5 text-[#D4AF37]"><Minus size={14} /></button>
+                    <span className="text-xs font-semibold w-4 text-center">{cart[item.id]}</span>
+                    <button onClick={() => updateQty(item.id, 1)} className="p-1.5 text-[#D4AF37]"><Plus size={14} /></button>
                   </div>
-                </Link>
-                <p className="text-xs text-white/40 mt-0.5">{item.calories || 0} kcal &middot; {item.protein || 0}g protein</p>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-sm font-bold text-[#D4AF37]">₹{item.price}</span>
-                  {cart[item.id] ? (
-                    <div className="flex items-center gap-2 bg-[#0c0f0f] border border-white/10 rounded-lg">
-                      <button onClick={() => addToCart(item, -1)} className="p-1.5 text-[#D4AF37]"><Minus size={14} /></button>
-                      <span className="text-xs font-semibold w-4 text-center text-white">{cart[item.id]}</span>
-                      <button onClick={() => addToCart(item, 1)} className="p-1.5 text-[#D4AF37]"><Plus size={14} /></button>
-                    </div>
-                  ) : (
-                    <button onClick={() => addToCart(item, 1)} className="px-3 py-1.5 bg-[#D4AF37]/10 border border-[#D4AF37]/30 rounded-lg text-xs font-semibold text-[#D4AF37] hover:bg-[#D4AF37]/20 active:scale-95 transition-transform">Add</button>
-                  )}
-                </div>
+                ) : (
+                  <button onClick={() => addToCart(item)} className="px-3 py-1.5 bg-[#D4AF37]/10 border border-[#D4AF37]/30 rounded-lg text-xs font-semibold text-[#D4AF37] hover:bg-[#D4AF37]/20 active:scale-95 transition-transform">Add</button>
+                )}
               </div>
             </div>
-          ))}
-        </div>
-      )}
-
-      {/* Floating cart button */}
-      {Object.keys(cart).length > 0 && (
-        <Link to="/basket" className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-32px)] max-w-[418px]">
-          <div className="bg-[#D4AF37] text-[#0c0f0f] px-4 py-3.5 rounded-xl flex items-center justify-between shadow-lg active:scale-[0.98] transition-transform">
-            <div className="flex items-center gap-2">
-              <ShoppingCart size={18} />
-              <span className="text-sm font-semibold">{Object.values(cart).reduce((a, b) => a + b, 0)} items</span>
-            </div>
-            <div className="flex items-center gap-1 text-sm font-bold">View Cart <ChevronRight size={16} /></div>
           </div>
-        </Link>
-      )}
+        ))}
+        {filtered.length === 0 && (
+          <div className="py-10 text-center text-white/40 text-sm">No dishes found.</div>
+        )}
+      </div>
     </div>
   );
 }

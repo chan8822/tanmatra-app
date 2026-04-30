@@ -1,123 +1,61 @@
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { Header } from "@/components/Header";
-import { API } from "@/lib/api";
-import { Sparkles, Heart, Zap, Baby, Users, Leaf, ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Heart, Salad, Droplets, Sun, Moon, Flame, TrendingUp, ChevronRight, Stethoscope } from "lucide-react";
+import { ROUTES } from "@/lib/routes";
 
-const tracks = [
-  {
-    key: "athlete",
-    label: "Athlete Track",
-    color: "from-amber-900/30 to-[#1a1c1c]",
-    border: "border-amber-500/20",
-    text: "text-amber-400",
-    icon: <Zap size={18} />,
-    desc: "High-protein, calorie-dense meals for active lifestyles. 30g+ protein per serving.",
-    tags: ["High Protein", "Muscle Recovery", "Complex Carbs"]
-  },
-  {
-    key: "junior",
-    label: "Junior Track",
-    color: "from-green-900/30 to-[#1a1c1c]",
-    border: "border-green-500/20",
-    text: "text-green-400",
-    icon: <Baby size={18} />,
-    desc: "Balanced macros for growing bodies. Lower sodium, no artificial additives.",
-    tags: ["Low Sodium", "Calcium Rich", "No Additives"]
-  },
-  {
-    key: "senior",
-    label: "Senior Track",
-    color: "from-blue-900/30 to-[#1a1c1c]",
-    border: "border-blue-500/20",
-    text: "text-blue-400",
-    icon: <Heart size={18} />,
-    desc: "Heart-healthy, easy-to-digest meals. Low glycemic index, rich in fiber.",
-    tags: ["Low GI", "High Fiber", "Heart Healthy"]
-  },
-  {
-    key: "everyday",
-    label: "Everyday Track",
-    color: "from-white/5 to-[#1a1c1c]",
-    border: "border-white/10",
-    text: "text-white/70",
-    icon: <Users size={18} />,
-    desc: "Wholesome balanced meals for the whole family. RD-verified, affordable.",
-    tags: ["Balanced", "Affordable", "Family Size"]
-  },
+const pillars = [
+  { icon: Salad, label: "Balanced Nutrition", desc: "Macro-optimized meals for your body", color: "text-green-400", bg: "bg-green-500/10", border: "border-green-500/20" },
+  { icon: Droplets, label: "Hydration", desc: "Detox drinks & infused waters", color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20" },
+  { icon: Sun, label: "Immunity Boost", desc: "Vitamin C & antioxidant-rich meals", color: "text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/20" },
+  { icon: Moon, label: "Sleep Support", desc: "Light dinners for better rest", color: "text-purple-400", bg: "bg-purple-500/10", border: "border-purple-500/20" },
+  { icon: Flame, label: "Metabolism", desc: "Thermogenic spices & lean proteins", color: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/20" },
+  { icon: TrendingUp, label: "Sustained Energy", desc: "Low-GI carbs for all-day power", color: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/20" },
 ];
 
 export default function WellnessPage() {
-  const [recs, setRecs] = useState<any>(null);
-
-  useEffect(() => {
-    API.recommend().catch(() => null).then(setRecs);
-  }, []);
+  const navigate = useNavigate();
 
   return (
-    <div className="fade-in pb-10">
-      <Header title="Wellness" backTo="/" />
-
-      {/* Hero */}
-      <div className="px-4 py-6">
-        <h1 className="font-serif text-3xl text-white mb-2">Wellness<br/><span className="text-[#D4AF37]">Signature</span></h1>
-        <p className="text-sm text-white/50">AI-personalized nutrition tracks for every member of your family.</p>
+    <div className="min-h-screen bg-[#0a0a0a] text-white pb-6">
+      <div className="sticky top-0 z-50 bg-[#0a0a0a]/95 backdrop-blur-md border-b border-white/5 px-4 py-3 flex items-center gap-3">
+        <button onClick={() => navigate(-1)} className="text-white/60"><ArrowLeft size={22} /></button>
+        <Heart size={20} className="text-green-400" />
+        <h1 className="text-base font-semibold">Wellness Hub</h1>
       </div>
 
-      {/* AI Recs */}
-      {recs && recs.recommendations && (
-        <div className="px-4 mb-6">
-          <div className="bg-gradient-to-r from-[#D4AF37]/10 to-[#1a1c1c] border border-[#D4AF37]/20 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Sparkles size={16} className="text-[#D4AF37]" />
-              <span className="text-xs text-[#D4AF37] font-medium">AI Recommendations</span>
-            </div>
-            <p className="text-sm text-white/70">{recs.recommendations[0]?.reason || "Personalized for your family's health goals."}</p>
+      {/* Hero */}
+      <div className="px-4 py-5">
+        <div className="card p-5 bg-gradient-to-br from-green-500/10 to-[#141414] border-green-500/20">
+          <h2 className="text-lg font-bold mb-1">Your Daily Wellness</h2>
+          <p className="text-xs text-white/40 mb-3">6 pillars of holistic health, backed by our RDs</p>
+          <div className="flex gap-2">
+            <button onClick={() => navigate(ROUTES.healthQuiz)} className="btn-primary text-xs px-4 py-2 rounded-xl">Take Quiz</button>
+            <button onClick={() => navigate(ROUTES.consultRD)} className="btn-outline text-xs px-4 py-2 rounded-xl flex items-center gap-1">
+              <Stethoscope size={12} /> Talk to RD
+            </button>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Tracks */}
-      <div className="px-4 space-y-3">
-        <h2 className="text-sm uppercase tracking-wider text-white/40 mb-1">Health Tracks</h2>
-        {tracks.map((t) => (
-          <Link key={t.key} to="/track" className={`block bg-gradient-to-r ${t.color} border ${t.border} rounded-xl p-4 active:scale-[0.99] transition-transform`}>
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center ${t.text}`}>{t.icon}</div>
-                <div>
-                  <h3 className={`text-sm font-semibold ${t.text}`}>{t.label}</h3>
-                  <p className="text-xs text-white/50 mt-0.5 leading-relaxed">{t.desc}</p>
-                </div>
-              </div>
-              <ChevronRight size={16} className="text-white/20 mt-2" />
+      {/* Pillars */}
+      <div className="px-4 space-y-2">
+        {pillars.map((p) => (
+          <div key={p.label} className={`card p-3.5 flex items-center gap-3 border ${p.border} ${p.bg}`}>
+            <div className={`w-10 h-10 rounded-xl ${p.bg} flex items-center justify-center`}>
+              <p.icon size={18} className={p.color} />
             </div>
-            <div className="flex gap-2 mt-3">
-              {t.tags.map((tag) => (
-                <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/40 border border-white/5">{tag}</span>
-              ))}
+            <div className="flex-1">
+              <p className="text-sm font-semibold">{p.label}</p>
+              <p className="text-xs text-white/40">{p.desc}</p>
             </div>
-          </Link>
+            <ChevronRight size={14} className="text-white/20" />
+          </div>
         ))}
       </div>
 
-      {/* Nutrition Philosophy */}
-      <div className="px-4 py-8">
-        <div className="bg-[#1a1c1c] border border-white/5 rounded-xl p-4 space-y-3">
-          <h3 className="text-sm font-semibold text-white flex items-center gap-2"><Leaf size={16} className="text-[#D4AF37]" /> Our Nutrition Philosophy</h3>
-          {[
-            "Every dish is reviewed by a Registered Dietitian (RD).",
-            "Macros are lab-tested, not estimated.",
-            "No artificial preservatives, colors, or MSG.",
-            "Ingredients sourced from certified vendors only.",
-            "Allergen protocols followed in segregated kitchens.",
-          ].map((line, i) => (
-            <div key={i} className="flex items-start gap-2 text-xs text-white/60">
-              <span className="text-[#D4AF37] mt-0.5">•</span>
-              {line}
-            </div>
-          ))}
-        </div>
+      {/* Tip Card */}
+      <div className="mx-4 mt-4 card p-4 border-l-2 border-l-green-500">
+        <p className="text-xs text-green-400 font-medium mb-1">Today's Tip</p>
+        <p className="text-sm text-white/60">Start your day with warm lemon water to kickstart digestion and boost vitamin C intake.</p>
       </div>
     </div>
   );

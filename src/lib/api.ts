@@ -3,6 +3,7 @@
 // When backend is deployed, set VITE_API_BASE env var
 
 import { categories, menuItems } from "@/data/menu";
+import { normalizeItem } from "@/lib/filters";
 
 const API_BASE = import.meta.env.VITE_API_BASE || (window as any).__API_BASE__ || "";
 console.log("[API] Mode:", API_BASE ? `Backend: ${API_BASE}` : "STANDALONE (baked-in data)");
@@ -97,9 +98,9 @@ export const API = {
       () => categories
     ),
 
-  items: async (cat?: string, search?: string, page = 1, pageSize = 12) => {
+  items: async (cat?: string, search?: string, page = 1, pageSize = 200) => {
     const fallback = () => {
-      let list = menuItems.map((i: any) => ({ ...i, is_rd_verified: true, rd_verified: true, prep_time: i.prep_time || 20 + Math.floor(Math.random() * 20) }));
+      let list = menuItems.map(normalizeItem);
       if (cat && cat !== "all") list = list.filter((i) => i.category_id === cat);
       if (search) list = list.filter((i) => i.name.toLowerCase().includes(search.toLowerCase()));
       const start = (page - 1) * pageSize;

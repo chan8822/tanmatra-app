@@ -1,0 +1,15 @@
+{
+  "name": "Tanmatra - RD Verified Healthy Meals",
+  "short_name": "Tanmatra",
+  "description": "RD-verified healthy meals delivered to your doorstep. Save 30% vs aggregators.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#121212",
+  "orientation": "portrait",
+  "scope": "/",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/dish/hm3.jpg", "sizes": "512x512", "type": "image/jpeg" }
+  ]
+}
