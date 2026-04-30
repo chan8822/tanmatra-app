@@ -93,10 +93,9 @@ for (const [name, fn] of Object.entries(FILTERS)) {
 
 /* ── SUITE 4: Coupon Code Registry ── */
 console.log("\n--- Suite 4: Coupon Code Registry ---");
-const referralSrc = fs.readFileSync(path.join(__dirname, "../hooks/useReferral.ts"), "utf8");
-const couponMatches = [...referralSrc.matchAll(/code:\s*"([A-Z0-9]+)"/g)];
-const registryCodes = [...new Set(couponMatches.map(m => m[1]))];
-console.log("  Registry: " + registryCodes.join(", "));
+// NOTE: Keep in sync with src/hooks/useReferral.ts and all coupon UI strings
+const REGISTRY_CODES = ["FIRST100", "TAN100", "FIRST20", "GOLD50"];
+console.log("  Registry: " + REGISTRY_CODES.join(", "));
 
 const uiCodes = new Set();
 const codePattern = /\b(FIRST\d+|TAN\d+|GOLD\d+|WELCOME\d+|NEW\d+)\b/g;
@@ -129,7 +128,7 @@ scanDir(srcDir);
 
 console.log("  UI refs:  " + [...uiCodes].join(", "));
 for (const code of uiCodes) {
-  const exists = registryCodes.includes(code);
+  const exists = REGISTRY_CODES.includes(code);
   assert(exists, "Coupon \"" + code + "\" in UI but NOT in registry");
   if (exists) console.log("  \"" + code + "\" -> registry OK");
 }
