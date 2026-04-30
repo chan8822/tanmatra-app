@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Brain, ChevronRight, CheckCircle, Target, Heart, Zap, Salad, RotateCcw } from "lucide-react";
+import { ArrowLeft, Brain, ChevronRight, CheckCircle, Target, Heart, Zap, Salad, RotateCcw, Calendar, TrendingDown } from "lucide-react";
 import { ROUTES } from "@/lib/routes";
+import { p } from "@/lib/format";
 
 const questions = [
   {
@@ -91,6 +92,25 @@ export default function HealthQuizPage() {
                 <span className="text-sm">{r}</span>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Subscription recommendation */}
+        <div className="card p-4 mb-4 border border-green-500/20">
+          <div className="flex items-center gap-2 mb-2">
+            <Calendar size={16} className="text-green-400" />
+            <h3 className="text-sm font-bold text-green-400">Recommended Subscription</h3>
+          </div>
+          <p className="text-xs text-white/50 mb-3">
+            Based on your goal of <span className="text-white font-semibold">{answers[0]}</span>, our <span className="text-[#D4AF37] font-semibold">Everyday Wellness</span> plan delivers RD-curated meals matching your needs.
+          </p>
+          <div className="flex items-center justify-between text-xs mb-3">
+            <span className="text-white/40">Save 30% vs ordering daily</span>
+            <span className="text-green-400 font-bold">{p(1799)} saved monthly</span>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => navigate(ROUTES.subscriptions)} className="flex-1 btn-primary text-sm rounded-xl">View Plans</button>
+            <button onClick={() => navigate(ROUTES.menu)} className="flex-1 btn-outline text-sm rounded-xl">Browse Menu</button>
           </div>
         </div>
 

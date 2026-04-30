@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, MapPin, Clock, ChevronRight, Minus, Plus, Tag, Scissors, Edit3 } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, ChevronRight, Minus, Plus, Tag, Scissors, Edit3, Crown, Truck, Calendar, TrendingUp } from "lucide-react";
 import { cartStore } from "@/lib/store";
 import { ROUTES } from "@/lib/routes";
 import { p, saveVsAggregator } from "@/lib/format";
@@ -73,6 +73,47 @@ export default function CartPage() {
         </div>
       )}
 
+      {/* Free Delivery Threshold */}
+      {cart.subtotal < 499 && (
+        <div className="mx-4 mt-3 p-3 card border border-green-500/20">
+          <div className="flex items-center gap-2">
+            <Truck size={16} className="text-green-400 shrink-0" />
+            <p className="text-xs text-white/60">Add <span className="font-bold text-green-400">{p(499 - cart.subtotal)}</span> more for <span className="font-bold text-green-400">FREE delivery</span></p>
+          </div>
+          <div className="mt-2 h-1 bg-white/5 rounded-full overflow-hidden">
+            <div className="h-full bg-green-400 rounded-full" style={{ width: `${Math.min(100, (cart.subtotal / 499) * 100)}%` }} />
+          </div>
+        </div>
+      )}
+
+      {/* Gold Upsell */}
+      <div className="mx-4 mt-3 p-3 bg-gradient-to-r from-[#D4AF37]/15 to-transparent border border-[#D4AF37]/20 rounded-xl flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/20 flex items-center justify-center shrink-0">
+          <Crown size={16} className="text-[#D4AF37]" />
+        </div>
+        <div className="flex-1">
+          <p className="text-xs font-bold text-[#D4AF37]">Get Gold & save 20%</p>
+          <p className="text-[9px] text-white/40">This order would cost {p(Math.round(cart.total * 0.8))} with Gold</p>
+        </div>
+        <button onClick={() => navigate(ROUTES.gold)} className="shrink-0 px-2.5 py-1 bg-[#D4AF37]/20 border border-[#D4AF37]/30 text-[#D4AF37] text-[9px] font-bold rounded">
+          Upgrade
+        </button>
+      </div>
+
+      {/* Subscription Upsell */}
+      <div className="mx-4 mt-3 p-3 card border border-green-500/20 flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0">
+          <Calendar size={16} className="text-green-400" />
+        </div>
+        <div className="flex-1">
+          <p className="text-xs font-bold text-green-400">Subscribe & save 30%</p>
+          <p className="text-[9px] text-white/40">Daily meals from {p(199)}/meal</p>
+        </div>
+        <button onClick={() => navigate(ROUTES.subscriptions)} className="shrink-0 px-2.5 py-1 bg-green-500/20 border border-green-500/30 text-green-400 text-[9px] font-bold rounded">
+          View
+        </button>
+      </div>
+
       {/* Cart Items */}
       <div className="mx-4 mt-4 card-elevated p-4 space-y-4">
         {items.map((item) => (
@@ -90,7 +131,7 @@ export default function CartPage() {
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="text-sm font-medium truncate">{item.name}</h3>
-              <button className="text-[10px] text-[#D4AF37] mt-0.5 flex items-center gap-0.5">
+              <button onClick={() => navigate(ROUTES.dish(item.id))} className="text-[10px] text-[#D4AF37] mt-0.5 flex items-center gap-0.5">
                 <Edit3 size={8} /> Edit
               </button>
             </div>

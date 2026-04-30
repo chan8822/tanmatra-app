@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Calendar, CheckCircle, Zap, Heart, Salad, ChevronRight } from "lucide-react";
+import { ArrowLeft, Calendar, CheckCircle, Zap, Heart, Salad, TrendingDown, Crown, Star, Loader2 } from "lucide-react";
 import { ROUTES } from "@/lib/routes";
 import { p } from "@/lib/format";
 
@@ -43,6 +43,35 @@ const plans = [
 export default function SubscriptionsPage() {
   const navigate = useNavigate();
   const [selected, setSelected] = useState(0);
+  const [subscribed, setSubscribed] = useState(false);
+  const [processing, setProcessing] = useState(false);
+
+  const handleSubscribe = () => {
+    setProcessing(true);
+    setTimeout(() => {
+      const plan = plans[selected];
+      localStorage.setItem("tanmatra_subscription", JSON.stringify({ plan: plan.name, price: plan.price, startedAt: new Date().toISOString() }));
+      setProcessing(false);
+      setSubscribed(true);
+    }, 1500);
+  };
+
+  if (subscribed) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col items-center justify-center px-6 text-center">
+        <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mb-4">
+          <CheckCircle size={32} className="text-green-400" />
+        </div>
+        <h2 className="text-xl font-bold mb-1">Subscription Active!</h2>
+        <p className="text-sm text-white/50 mb-1">{plans[selected].name} plan</p>
+        <p className="text-xs text-white/30 mb-8">Your first meal will be delivered tomorrow. Pause anytime from Profile.</p>
+        <div className="flex gap-3 w-full max-w-xs">
+          <button onClick={() => navigate(ROUTES.menu)} className="flex-1 btn-gold text-sm py-3 rounded-xl">Browse Menu</button>
+          <button onClick={() => navigate(ROUTES.home)} className="flex-1 btn-outline text-sm py-3 rounded-xl">Home</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white pb-6">
@@ -54,6 +83,21 @@ export default function SubscriptionsPage() {
 
       <div className="px-4 py-4">
         <p className="text-sm text-white/40 mb-4">Subscribe to save up to 30% on daily healthy meals</p>
+
+        {/* Why subscribe */}
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          {[
+            { label: "Save 30%", desc: "vs ordering daily" },
+            { label: "Free delivery", desc: "Always" },
+            { label: "Pause anytime", desc: "No questions" },
+            { label: "RD curated", desc: "Rotating menu" },
+          ].map((item) => (
+            <div key={item.label} className="card p-2.5 text-center">
+              <p className="text-xs font-bold text-[#D4AF37]">{item.label}</p>
+              <p className="text-[10px] text-white/40">{item.desc}</p>
+            </div>
+          ))}
+        </div>
 
         <div className="space-y-3">
           {plans.map((plan, i) => (
@@ -81,11 +125,44 @@ export default function SubscriptionsPage() {
             </button>
           ))}
         </div>
+
+        {/* Savings breakdown */}
+        <div className="mt-4 card p-4">
+          <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+            <TrendingDown size={14} className="text-green-400" /> Your Savings
+          </h3>
+          <div className="space-y-2 text-xs">
+            <div className="flex justify-between text-white/50">
+              <span>A-la-carte monthly cost</span>
+              <span className="line-through">{p(Math.round(plans[selected].price * 1.43))}</span>
+            </div>
+            <div className="flex justify-between text-white/50">
+              <span>Subscription price</span>
+              <span>{p(plans[selected].price)}</span>
+            </div>
+            <div className="h-px bg-white/5" />
+            <div className="flex justify-between font-bold text-green-400">
+              <span>You save</span>
+              <span>{p(Math.round(plans[selected].price * 0.43))}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Gold bundle */}
+        <div className="mt-3 p-3 bg-gradient-to-r from-[#D4AF37]/10 to-transparent border border-[#D4AF37]/20 rounded-xl flex items-center gap-3">
+          <Crown size={16} className="text-[#D4AF37] shrink-0" />
+          <div className="flex-1">
+            <p className="text-xs font-bold text-[#D4AF37]">Gold + Subscription bundle</p>
+            <p className="text-[10px] text-white/40">Get Gold membership FREE with 3-month plan</p>
+          </div>
+          <Star size={14} className="text-[#D4AF37] shrink-0" />
+        </div>
       </div>
 
       <div className="px-4 mt-4">
-        <button className="w-full btn-primary rounded-xl">
-          Subscribe Now &middot; {p(plans[selected].price)}
+        <button onClick={handleSubscribe} disabled={processing} className="w-full btn-primary rounded-xl flex items-center justify-center gap-2">
+          {processing ? <Loader2 size={16} className="animate-spin" /> : null}
+          {processing ? "Processing..." : `Subscribe Now · ${p(plans[selected].price)}`}
         </button>
         <p className="text-[10px] text-white/30 text-center mt-2">Cancel anytime. No hidden charges.</p>
       </div>

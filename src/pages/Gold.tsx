@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Crown, Check, Star, Zap, Percent, Truck, Heart } from "lucide-react";
+import { ArrowLeft, Crown, Check, Star, Zap, Percent, Truck, Heart, Calculator, Loader2 } from "lucide-react";
 import { ROUTES } from "@/lib/routes";
 import { p } from "@/lib/format";
 
@@ -19,6 +20,36 @@ const plans = [
 
 export default function GoldPage() {
   const navigate = useNavigate();
+  const [selected, setSelected] = useState(1);
+  const [upgraded, setUpgraded] = useState(false);
+  const [processing, setProcessing] = useState(false);
+
+  const handleUpgrade = () => {
+    setProcessing(true);
+    setTimeout(() => {
+      const plan = plans[selected];
+      localStorage.setItem("tanmatra_gold", JSON.stringify({ plan: plan.duration, price: plan.price, startedAt: new Date().toISOString() }));
+      setProcessing(false);
+      setUpgraded(true);
+    }, 1500);
+  };
+
+  if (upgraded) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col items-center justify-center px-6 text-center">
+        <div className="w-16 h-16 bg-[#D4AF37]/10 rounded-full flex items-center justify-center mb-4">
+          <Crown size={32} className="text-[#D4AF37]" />
+        </div>
+        <h2 className="text-xl font-bold mb-1">Welcome to Gold!</h2>
+        <p className="text-sm text-white/50 mb-1">{plans[selected].duration} membership active</p>
+        <p className="text-xs text-white/30 mb-8">You now get 20% off, free delivery, and priority service on every order.</p>
+        <div className="flex gap-3 w-full max-w-xs">
+          <button onClick={() => navigate(ROUTES.menu)} className="flex-1 btn-gold text-sm py-3 rounded-xl">Order Now</button>
+          <button onClick={() => navigate(ROUTES.home)} className="flex-1 btn-outline text-sm py-3 rounded-xl">Home</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white pb-6">
@@ -57,8 +88,8 @@ export default function GoldPage() {
       <div className="px-4">
         <h3 className="text-sm font-bold mb-3">Choose Your Plan</h3>
         <div className="space-y-3">
-          {plans.map((plan) => (
-            <button key={plan.duration} className={`w-full card p-4 text-left border-2 relative ${plan.popular ? "border-[#D4AF37] bg-[#D4AF37]/5" : "border-transparent"}`}>
+          {plans.map((plan, i) => (
+            <button key={plan.duration} onClick={() => setSelected(i)} className={`w-full card p-4 text-left border-2 relative transition-colors ${selected === i ? "border-[#D4AF37] bg-[#D4AF37]/5" : "border-transparent"}`}>
               {plan.popular && <span className="absolute top-2 right-2 text-[8px] font-bold bg-[#D4AF37] text-[#0a0a0a] px-1.5 py-0.5 rounded">POPULAR</span>}
               <div className="flex items-baseline justify-between">
                 <span className="text-sm font-semibold">{plan.duration}</span>
@@ -70,8 +101,33 @@ export default function GoldPage() {
         </div>
       </div>
 
+      {/* Savings calculator */}
+      <div className="px-4 mt-5">
+        <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+          <Calculator size={14} className="text-[#D4AF37]" /> How much you will save
+        </h3>
+        <div className="card p-4 space-y-2">
+          {[
+            { label: "If you order 2x/week", save: 240 },
+            { label: "If you order 4x/week", save: 580 },
+            { label: "If you order daily", save: 1240 },
+          ].map((row) => (
+            <div key={row.label} className="flex justify-between text-xs">
+              <span className="text-white/50">{row.label}</span>
+              <span className="text-green-400 font-bold">Save {p(row.save)}/mo</span>
+            </div>
+          ))}
+          <div className="h-px bg-white/5 my-1" />
+          <p className="text-[10px] text-white/30">Includes 20% off + free delivery savings vs aggregator platforms</p>
+        </div>
+      </div>
+
       <div className="px-4 mt-6">
-        <button className="w-full btn-gold rounded-xl">Upgrade to Gold</button>
+        <button onClick={handleUpgrade} disabled={processing} className="w-full btn-gold rounded-xl flex items-center justify-center gap-2">
+          {processing ? <Loader2 size={16} className="animate-spin" /> : null}
+          {processing ? "Processing..." : `Upgrade to Gold · ${p(plans[selected].price)}`}
+        </button>
+        <p className="text-[10px] text-white/30 text-center mt-2">Cancel anytime. Benefits apply immediately.</p>
       </div>
     </div>
   );

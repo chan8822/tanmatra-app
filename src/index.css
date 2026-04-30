@@ -138,6 +138,16 @@
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }
 
+.savings-pulse {
+  animation: savingsPulse 1.5s ease-out;
+}
+
+@keyframes savingsPulse {
+  0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4); }
+  70% { box-shadow: 0 0 0 8px rgba(76, 175, 80, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+}
+
 @layer base {
   iframe[src*="kimi"],
   iframe[src*="chat"],

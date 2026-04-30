@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Settings, User, MapPin, Bell, Shield, Moon, Sun, ChevronRight } from "lucide-react";
+import { ROUTES } from "@/lib/routes";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -11,7 +12,7 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white pb-6">
       <div className="sticky top-0 z-50 bg-[#0a0a0a]/95 backdrop-blur-md border-b border-white/5 px-4 py-3 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="text-white/60"><ArrowLeft size={22} /></button>
+        <button onClick={() => navigate(ROUTES.home)} className="text-white/60"><ArrowLeft size={22} /></button>
         <Settings size={20} className="text-white/40" />
         <h1 className="text-base font-semibold">Settings</h1>
       </div>
@@ -20,16 +21,16 @@ export default function SettingsPage() {
       <div className="px-4 mt-4">
         <h3 className="text-xs font-bold text-white/40 uppercase mb-2">Account</h3>
         <div className="space-y-1">
-          <div className="flex items-center gap-3 p-3 card">
+          <button onClick={() => alert("Coming soon! Edit your profile details.")} className="flex items-center gap-3 p-3 card w-full text-left">
             <User size={16} className="text-white/40" />
             <span className="text-sm flex-1">Edit Profile</span>
             <ChevronRight size={14} className="text-white/20" />
-          </div>
-          <div className="flex items-center gap-3 p-3 card">
+          </button>
+          <button onClick={() => alert("Coming soon! Manage your saved addresses.")} className="flex items-center gap-3 p-3 card w-full text-left">
             <MapPin size={16} className="text-white/40" />
             <span className="text-sm flex-1">Saved Addresses</span>
             <ChevronRight size={14} className="text-white/20" />
-          </div>
+          </button>
         </div>
       </div>
 
@@ -70,11 +71,11 @@ export default function SettingsPage() {
       <div className="px-4 mt-5">
         <h3 className="text-xs font-bold text-white/40 uppercase mb-2">Privacy</h3>
         <div className="space-y-1">
-          <div className="flex items-center gap-3 p-3 card">
+          <button onClick={() => alert("Coming soon! View our privacy policy and data practices.")} className="flex items-center gap-3 p-3 card w-full text-left">
             <Shield size={16} className="text-white/40" />
             <span className="text-sm flex-1">Data & Privacy</span>
             <ChevronRight size={14} className="text-white/20" />
-          </div>
+          </button>
         </div>
       </div>
     </div>

@@ -117,6 +117,7 @@ export const cartStore = {
 export interface Order {
   id: string;
   status: "confirmed" | "preparing" | "ready" | "out_for_delivery" | "delivered";
+  paymentStatus: "pending" | "paid" | "failed" | "refunded";
   items: CartItem[];
   total: number;
   subtotal: number;
@@ -168,6 +169,13 @@ export const orderStore = {
     localStorage.setItem("tanmatra_orders", JSON.stringify(orders));
   },
 
+  updatePaymentStatus(id: string, paymentStatus: Order["paymentStatus"]) {
+    const orders = getOrders();
+    const order = orders.find((o) => o.id === id);
+    if (order) order.paymentStatus = paymentStatus;
+    localStorage.setItem("tanmatra_orders", JSON.stringify(orders));
+  },
+
   subscribe(fn: () => void): () => void {
     const handler = () => fn();
     window.addEventListener("storage", handler);
@@ -175,13 +183,17 @@ export const orderStore = {
   },
 };
 
-// Kitchen Orders (for KDS)
+// Kitchen Orders (for KDS) — only PAID orders that are confirmed or preparing
 export const kitchenStore = {
   getPending(): Order[] {
-    return getOrders().filter((o) => o.status === "confirmed" || o.status === "preparing");
+    return getOrders().filter((o) => (o.status === "confirmed" || o.status === "preparing") && o.paymentStatus === "paid");
   },
 
   getReady(): Order[] {
-    return getOrders().filter((o) => o.status === "ready");
+    return getOrders().filter((o) => o.status === "ready" && o.paymentStatus === "paid");
+  },
+
+  getAwaitingPayment(): Order[] {
+    return getOrders().filter((o) => o.status === "confirmed" && o.paymentStatus === "pending");
   },
 };

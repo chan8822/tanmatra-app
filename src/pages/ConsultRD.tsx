@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Stethoscope, Calendar, Clock, CheckCircle, MessageSquare, User, Phone } from "lucide-react";
+import { ArrowLeft, Stethoscope, Calendar, Clock, CheckCircle, MessageSquare, User, Phone, Crown, Sparkles } from "lucide-react";
 import { ROUTES } from "@/lib/routes";
 
 const RD_PROFILES = [
@@ -39,6 +39,16 @@ export default function ConsultRDPage() {
       <div className="sticky top-0 z-50 bg-[#0a0a0a]/95 backdrop-blur-md border-b border-white/5 px-4 py-3 flex items-center gap-3">
         <button onClick={() => step > 1 ? setStep(step - 1) : navigate(-1)} className="text-white/60"><ArrowLeft size={22} /></button>
         <h1 className="text-base font-semibold">Consult an RD</h1>
+      </div>
+
+      {/* Gold upsell */}
+      <div className="mx-4 mt-3 p-3 bg-gradient-to-r from-[#D4AF37]/15 to-transparent border border-[#D4AF37]/20 rounded-xl flex items-center gap-3">
+        <Crown size={16} className="text-[#D4AF37] shrink-0" />
+        <div className="flex-1">
+          <p className="text-xs font-bold text-[#D4AF37]">Gold members: 1 free consult/month</p>
+          <p className="text-[10px] text-white/40">Non-members: ₹499 per session</p>
+        </div>
+        <button onClick={() => navigate(ROUTES.gold)} className="text-[10px] font-bold text-[#0a0a0a] bg-[#D4AF37] px-2.5 py-1 rounded-lg">Join Gold</button>
       </div>
 
       {step === 1 && (

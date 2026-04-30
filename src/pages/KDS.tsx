@@ -1,142 +1,132 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { ArrowLeft, ChefHat, Clock, Package, AlertTriangle, CheckCircle } from "lucide-react";
-import { orderStore } from "@/lib/store";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Clock, Flame, Package, Bike, CheckCircle, Timer, CreditCard, AlertTriangle } from "lucide-react";
+import { orderStore, kitchenStore } from "@/lib/store";
 import { ROUTES } from "@/lib/routes";
-import { p, statusLabel } from "@/lib/format";
 
-const FLOW: Record<string, string> = {
-  confirmed: "preparing",
-  preparing: "ready",
-  ready: "out_for_delivery",
-  out_for_delivery: "delivered",
-};
-
-const STATUS_CONFIG: Record<string, { color: string; btn: string; nextLabel: string }> = {
-  confirmed: { color: "border-yellow-500/30 bg-yellow-500/5", btn: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", nextLabel: "Start Preparing" },
-  preparing: { color: "border-purple-500/30 bg-purple-500/5", btn: "bg-purple-500/20 text-purple-400 border-purple-500/30", nextLabel: "Mark Ready" },
-  ready: { color: "border-blue-500/30 bg-blue-500/5", btn: "bg-blue-500/20 text-blue-400 border-blue-500/30", nextLabel: "Hand to Rider" },
+const statusMeta: Record<string, { label: string; color: string }> = {
+  confirmed: { label: "New", color: "text-blue-400" },
+  preparing: { label: "🔥 Prep", color: "text-orange-400" },
+  ready: { label: "Ready", color: "text-green-400" },
 };
 
 export default function KDSPage() {
-  const [orders, setOrders] = useState(orderStore.getAll());
+  const navigate = useNavigate();
+  const [pending, setPending] = useState(kitchenStore.getPending());
+  const [ready, setReady] = useState(kitchenStore.getReady());
+  const [awaitingPayment, setAwaitingPayment] = useState(kitchenStore.getAwaitingPayment());
 
   useEffect(() => {
-    const iv = setInterval(() => setOrders(orderStore.getAll()), 3000);
+    const tick = () => {
+      setPending(kitchenStore.getPending());
+      setReady(kitchenStore.getReady());
+      setAwaitingPayment(kitchenStore.getAwaitingPayment());
+    };
+    tick();
+    const iv = setInterval(tick, 3000);
     return () => clearInterval(iv);
   }, []);
 
-  const pending = orders.filter((o) => o.status === "confirmed" || o.status === "preparing");
-  const ready = orders.filter((o) => o.status === "ready");
-  const out = orders.filter((o) => o.status === "out_for_delivery");
-  const delivered = orders.filter((o) => o.status === "delivered");
-
-  const advance = (id: string) => {
-    const order = orders.find((o) => o.id === id);
-    if (order && FLOW[order.status]) {
-      orderStore.updateStatus(id, FLOW[order.status] as any);
-      setOrders(orderStore.getAll());
+  const advance = (id: string, current: string) => {
+    const flow = ["confirmed", "preparing", "ready", "out_for_delivery"];
+    const next = flow[flow.indexOf(current) + 1];
+    if (next) {
+      orderStore.updateStatus(id, next as any);
+      setPending(kitchenStore.getPending());
+      setReady(kitchenStore.getReady());
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white p-4">
-      <div className="flex items-center gap-3 mb-5">
-        <Link to={ROUTES.admin} className="text-white/60"><ArrowLeft size={22} /></Link>
-        <ChefHat size={20} className="text-orange-400" />
+    <div className="min-h-screen bg-[#0a0a0a] text-white">
+      <div className="sticky top-0 z-50 bg-[#0a0a0a]/95 backdrop-blur-md border-b border-white/5 px-4 py-3 flex items-center gap-3">
+        <button onClick={() => navigate(ROUTES.admin)} className="text-white/60"><ArrowLeft size={22} /></button>
+        <Flame size={20} className="text-orange-400" />
         <h1 className="text-base font-semibold">Kitchen Display</h1>
+        <span className="ml-auto text-xs text-white/40">{pending.length + ready.length} active</span>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-4 gap-2 mb-5">
-        <div className="card p-2.5 text-center">
-          <p className="text-[9px] text-white/40">Pending</p>
-          <p className="text-lg font-bold text-yellow-400">{pending.length}</p>
-        </div>
-        <div className="card p-2.5 text-center">
-          <p className="text-[9px] text-white/40">Ready</p>
-          <p className="text-lg font-bold text-blue-400">{ready.length}</p>
-        </div>
-        <div className="card p-2.5 text-center">
-          <p className="text-[9px] text-white/40">Out</p>
-          <p className="text-lg font-bold text-indigo-400">{out.length}</p>
-        </div>
-        <div className="card p-2.5 text-center">
-          <p className="text-[9px] text-white/40">Done</p>
-          <p className="text-lg font-bold text-green-400">{delivered.length}</p>
-        </div>
-      </div>
-
-      {/* Columns */}
-      <div className="space-y-5">
-        {/* Preparing Column */}
-        {pending.length > 0 && (
-          <div>
-            <h2 className="text-xs font-bold text-yellow-400 uppercase mb-2 flex items-center gap-1.5"><Clock size={12} /> Preparing ({pending.length})</h2>
-            <div className="space-y-2">
-              {pending.map((o) => <OrderTicket key={o.id} order={o} onAdvance={advance} />)}
-            </div>
+      {/* Awaiting Payment — Critical for ops: don't prep unpaid orders */}
+      {awaitingPayment.length > 0 && (
+        <div className="mx-4 mt-3 p-3 bg-gradient-to-r from-yellow-500/10 to-transparent border border-yellow-500/20 rounded-xl flex items-center gap-3">
+          <AlertTriangle size={16} className="text-yellow-400 shrink-0" />
+          <div className="flex-1">
+            <p className="text-xs font-bold text-yellow-400">{awaitingPayment.length} order{awaitingPayment.length > 1 ? "s" : ""} awaiting payment</p>
+            <p className="text-[10px] text-white/40">Do not start prep until payment is confirmed</p>
           </div>
-        )}
-
-        {/* Ready Column */}
-        {ready.length > 0 && (
-          <div>
-            <h2 className="text-xs font-bold text-blue-400 uppercase mb-2 flex items-center gap-1.5"><Package size={12} /> Ready ({ready.length})</h2>
-            <div className="space-y-2">
-              {ready.map((o) => <OrderTicket key={o.id} order={o} onAdvance={advance} />)}
-            </div>
-          </div>
-        )}
-
-        {/* Out Column */}
-        {out.length > 0 && (
-          <div>
-            <h2 className="text-xs font-bold text-indigo-400 uppercase mb-2 flex items-center gap-1.5"><CheckCircle size={12} /> Out for Delivery ({out.length})</h2>
-            <div className="space-y-2">
-              {out.map((o) => (
-                <div key={o.id} className="card p-3 border border-indigo-500/20 bg-indigo-500/5">
-                  <div className="flex items-start justify-between mb-2">
-                    <div><p className="text-sm font-bold">{o.id}</p><p className="text-[10px] text-white/40">{o.items?.length} items &middot; {p(o.total)}</p></div>
-                    <p className="text-[10px] text-indigo-400">Rider assigned</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {pending.length === 0 && ready.length === 0 && out.length === 0 && (
-        <div className="text-center py-10">
-          <AlertTriangle size={32} className="text-white/10 mx-auto mb-2" />
-          <p className="text-sm text-white/30">No active orders in the kitchen</p>
         </div>
       )}
-    </div>
-  );
-}
 
-function OrderTicket({ order, onAdvance }: { order: any; onAdvance: (id: string) => void }) {
-  const cfg = STATUS_CONFIG[order.status] || STATUS_CONFIG.confirmed;
-
-  return (
-    <div className={`card p-3 border ${cfg.color}`}>
-      <div className="flex items-start justify-between mb-2">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
+        {/* Incoming (paid + confirmed) */}
         <div>
-          <p className="text-sm font-bold">{order.id}</p>
-          <p className="text-[10px] text-white/40">{order.items?.length} items &middot; {p(order.total)}</p>
+          <h2 className="text-xs font-bold text-white/40 uppercase mb-3 flex items-center gap-2">
+            <Package size={12} /> New ({pending.filter(o => o.status === "confirmed").length})
+          </h2>
+          <div className="space-y-2">
+            {pending.filter(o => o.status === "confirmed").map((o) => (
+              <div key={o.id} className="card p-3 border-l-2 border-l-blue-500">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold">{o.id}</span>
+                  <span className="text-[10px] text-white/40 flex items-center gap-1"><Timer size={10} /> 0m</span>
+                </div>
+                <div className="space-y-0.5 text-[11px] text-white/50">
+                  {o.items.map((i) => (
+                    <div key={i.id} className="flex justify-between"><span>{i.name} x{i.qty}</span></div>
+                  ))}
+                </div>
+                <button onClick={() => advance(o.id, o.status)} className="mt-2 w-full py-1.5 bg-orange-500/10 border border-orange-500/20 rounded-lg text-[11px] font-bold text-orange-400">Start Prep</button>
+              </div>
+            ))}
+          </div>
         </div>
-        <p className="text-[10px] text-white/30">{new Date(order.createdAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</p>
+
+        {/* Preparing */}
+        <div>
+          <h2 className="text-xs font-bold text-white/40 uppercase mb-3 flex items-center gap-2">
+            <Flame size={12} /> Prep ({pending.filter(o => o.status === "preparing").length})
+          </h2>
+          <div className="space-y-2">
+            {pending.filter(o => o.status === "preparing").map((o) => (
+              <div key={o.id} className="card p-3 border-l-2 border-l-orange-500">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold">{o.id}</span>
+                  <span className="text-[10px] text-white/40 flex items-center gap-1"><Clock size={10} /> {statusMeta[o.status].label}</span>
+                </div>
+                <div className="space-y-0.5 text-[11px] text-white/50">
+                  {o.items.map((i) => (
+                    <div key={i.id} className="flex justify-between"><span>{i.name} x{i.qty}</span></div>
+                  ))}
+                </div>
+                <button onClick={() => advance(o.id, o.status)} className="mt-2 w-full py-1.5 bg-green-500/10 border border-green-500/20 rounded-lg text-[11px] font-bold text-green-400">Mark Ready</button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Ready */}
+        <div>
+          <h2 className="text-xs font-bold text-white/40 uppercase mb-3 flex items-center gap-2">
+            <CheckCircle size={12} /> Ready ({ready.length})
+          </h2>
+          <div className="space-y-2">
+            {ready.map((o) => (
+              <div key={o.id} className="card p-3 border-l-2 border-l-green-500">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold">{o.id}</span>
+                  <span className="text-[10px] text-green-400">Ready</span>
+                </div>
+                <div className="space-y-0.5 text-[11px] text-white/50">
+                  {o.items.map((i) => (
+                    <div key={i.id} className="flex justify-between"><span>{i.name} x{i.qty}</span></div>
+                  ))}
+                </div>
+                <button onClick={() => advance(o.id, o.status)} className="mt-2 w-full py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg text-[11px] font-bold text-blue-400">Dispatch</button>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
-      <div className="flex flex-wrap gap-1 mb-2">
-        {order.items?.slice(0, 4).map((i: any) => (
-          <span key={i.id} className="text-[10px] px-1.5 py-0.5 bg-white/5 rounded">{i.name} x{i.qty}</span>
-        ))}
-      </div>
-      <button onClick={() => onAdvance(order.id)} className={`w-full py-2 rounded-lg text-xs font-bold border ${cfg.btn}`}>
-        {cfg.nextLabel}
-      </button>
     </div>
   );
 }

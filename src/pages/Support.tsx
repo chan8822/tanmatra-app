@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, HelpCircle, MessageCircle, Mail, Phone, ChevronRight, Search, FileText, Shield } from "lucide-react";
+import { ArrowLeft, HelpCircle, MessageCircle, Mail, Phone, ChevronRight, Search, FileText, Shield, Home } from "lucide-react";
+import { ROUTES } from "@/lib/routes";
 
 const faqs = [
   { q: "How do I track my order?", a: "Go to Orders tab and tap on any active order to see real-time tracking." },
@@ -20,7 +21,7 @@ export default function SupportPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white pb-6">
       <div className="sticky top-0 z-50 bg-[#0a0a0a]/95 backdrop-blur-md border-b border-white/5 px-4 py-3 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="text-white/60"><ArrowLeft size={22} /></button>
+        <button onClick={() => navigate(ROUTES.home)} className="text-white/60"><ArrowLeft size={22} /></button>
         <HelpCircle size={20} className="text-[#D4AF37]" />
         <h1 className="text-base font-semibold">Help & Support</h1>
       </div>

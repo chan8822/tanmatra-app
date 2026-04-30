@@ -1,124 +1,167 @@
-import { Link } from "react-router-dom";
-import { ArrowLeft, BarChart3, TrendingUp, Users, ShoppingBag, Clock, Star, Package, DollarSign } from "lucide-react";
-import { ROUTES } from "@/lib/routes";
-import { p } from "@/lib/format";
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, TrendingUp, DollarSign, Package, Users, Star, TrendingDown, Percent } from "lucide-react";
 import { orderStore } from "@/lib/store";
 import { menuItems } from "@/data/menu";
-import { useState, useEffect } from "react";
+import { ROUTES } from "@/lib/routes";
+import { p } from "@/lib/format";
 
-const hourlyOrders = [2, 3, 1, 0, 0, 1, 4, 7, 9, 8, 6, 5, 7, 8, 6, 4, 5, 7, 9, 6, 4, 3, 2, 1];
-const maxOrders = Math.max(...hourlyOrders);
+// Estimate COGS as 32% of retail price (industry avg for premium delivery)
+const COGS_RATIO = 0.32;
+
+function calcCOGS(orderItems: { id: string; price: number; qty: number }[]) {
+  return orderItems.reduce((sum, i) => sum + i.price * i.qty * COGS_RATIO, 0);
+}
 
 export default function AnalyticsPage() {
-  const [orders] = useState(orderStore.getAll());
+  const navigate = useNavigate();
+  const [orders, setOrders] = useState(orderStore.getAll());
 
-  const stats = {
-    totalRevenue: orders.reduce((s, o) => s + (o.total || 0), 0),
-    totalOrders: orders.length,
-    avgOrderValue: orders.length > 0 ? Math.round(orders.reduce((s, o) => s + (o.total || 0), 0) / orders.length) : 0,
-    avgDeliveryTime: "28 min",
-  };
+  useEffect(() => {
+    const tick = () => setOrders(orderStore.getAll());
+    tick();
+    const iv = setInterval(tick, 5000);
+    return () => clearInterval(iv);
+  }, []);
 
-  // Status distribution
-  const statusDist = {
-    confirmed: orders.filter((o) => o.status === "confirmed").length,
-    preparing: orders.filter((o) => o.status === "preparing").length,
-    ready: orders.filter((o) => o.status === "ready").length,
-    out: orders.filter((o) => o.status === "out_for_delivery").length,
-    delivered: orders.filter((o) => o.status === "delivered").length,
-  };
-  const totalActive = statusDist.confirmed + statusDist.preparing + statusDist.ready + statusDist.out;
+  // Real-time metrics
+  const metrics = useMemo(() => {
+    const paidOrders = orders.filter(o => o.paymentStatus === "paid");
+    const totalRevenue = paidOrders.reduce((s, o) => s + o.total, 0);
+    const totalCOGS = paidOrders.reduce((s, o) => s + calcCOGS(o.items), 0);
+    const gm = totalRevenue > 0 ? ((totalRevenue - totalCOGS) / totalRevenue) * 100 : 0;
+    const today = new Date().toDateString();
+    const todayOrders = paidOrders.filter(o => new Date(o.createdAt).toDateString() === today);
+    const todayRevenue = todayOrders.reduce((s, o) => s + o.total, 0);
 
-  // Top selling items (mock data based on menu)
-  const topItems = menuItems.slice(0, 5).map((m, i) => ({
-    name: m.name,
-    orders: [34, 28, 22, 19, 16][i],
-    revenue: [11560, 7280, 4840, 3040, 3200][i],
-  }));
+    return {
+      revenue: totalRevenue,
+      orders: paidOrders.length,
+      avgOrder: paidOrders.length > 0 ? Math.round(totalRevenue / paidOrders.length) : 0,
+      gm: gm,
+      todayOrders: todayOrders.length,
+      todayRevenue,
+      totalCOGS,
+    };
+  }, [orders]);
 
-  const metrics = [
-    { label: "Revenue", value: p(stats.totalRevenue), change: "+12%", icon: DollarSign, color: "text-green-400", bg: "bg-green-500/10" },
-    { label: "Orders", value: String(stats.totalOrders), change: "+5", icon: ShoppingBag, color: "text-[#D4AF37]", bg: "bg-[#D4AF37]/10" },
-    { label: "Avg Order", value: p(stats.avgOrderValue), change: "+3%", icon: TrendingUp, color: "text-blue-400", bg: "bg-blue-500/10" },
-    { label: "Avg Delivery", value: stats.avgDeliveryTime, change: "-2 min", icon: Clock, color: "text-purple-400", bg: "bg-purple-500/10" },
-  ];
+  // Top items by actual order volume
+  const topItems = useMemo(() => {
+    const counts: Record<string, { name: string; count: number; revenue: number; cogs: number }> = {};
+    orders.filter(o => o.paymentStatus === "paid").forEach(o => {
+      o.items.forEach(i => {
+        if (!counts[i.id]) counts[i.id] = { name: i.name, count: 0, revenue: 0, cogs: 0 };
+        counts[i.id].count += i.qty;
+        counts[i.id].revenue += i.price * i.qty;
+        counts[i.id].cogs += i.price * i.qty * COGS_RATIO;
+      });
+    });
+    return Object.values(counts).sort((a, b) => b.count - a.count).slice(0, 5);
+  }, [orders]);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white p-4">
-      <div className="flex items-center gap-3 mb-5">
-        <Link to={ROUTES.admin} className="text-white/60"><ArrowLeft size={22} /></Link>
-        <BarChart3 size={20} className="text-green-400" />
+    <div className="min-h-screen bg-[#0a0a0a] text-white">
+      <div className="sticky top-0 z-50 bg-[#0a0a0a]/95 backdrop-blur-md border-b border-white/5 px-4 py-3 flex items-center gap-3">
+        <button onClick={() => navigate(ROUTES.admin)} className="text-white/60"><ArrowLeft size={22} /></button>
+        <TrendingUp size={20} className="text-[#D4AF37]" />
         <h1 className="text-base font-semibold">Analytics</h1>
       </div>
 
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-2 gap-3 mb-5">
-        {metrics.map((m) => (
-          <div key={m.label} className="card p-3">
-            <div className={`w-8 h-8 rounded-lg ${m.bg} flex items-center justify-center mb-2`}>
-              <m.icon size={14} className={m.color} />
-            </div>
-            <p className="text-[10px] text-white/40">{m.label}</p>
-            <p className="text-lg font-bold mt-0.5">{m.value}</p>
-            <p className={`text-[10px] ${m.change.startsWith("+") ? "text-green-400" : "text-green-400"}`}>{m.change} vs yesterday</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Hourly Chart */}
-      <div className="card p-4 mb-5">
-        <h2 className="text-sm font-semibold mb-3">Hourly Order Volume (24h)</h2>
-        <div className="flex items-end gap-1 h-28">
-          {hourlyOrders.map((count, i) => (
-            <div key={i} className="flex-1 flex flex-col items-center gap-1">
-              <div className="w-full relative" style={{ height: `${(count / maxOrders) * 100}%` }}>
-                <div className="absolute bottom-0 left-0 right-0 bg-[#D4AF37]/40 rounded-t-sm" style={{ height: "100%" }}>
-                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-[#D4AF37] rounded-t-sm" />
-                </div>
-              </div>
-              <span className="text-[7px] text-white/30">{i}</span>
-            </div>
-          ))}
+      {/* Key Metrics */}
+      <div className="grid grid-cols-2 gap-3 p-4">
+        <div className="card p-3">
+          <DollarSign size={16} className="text-[#D4AF37] mb-1" />
+          <p className="text-lg font-bold">{p(metrics.revenue)}</p>
+          <p className="text-[10px] text-white/40">Total Revenue (paid)</p>
+        </div>
+        <div className="card p-3">
+          <Package size={16} className="text-green-400 mb-1" />
+          <p className="text-lg font-bold">{metrics.orders}</p>
+          <p className="text-[10px] text-white/40">Paid Orders</p>
+        </div>
+        <div className="card p-3">
+          <Users size={16} className="text-blue-400 mb-1" />
+          <p className="text-lg font-bold">{p(metrics.avgOrder)}</p>
+          <p className="text-[10px] text-white/40">Avg. Order Value</p>
+        </div>
+        <div className="card p-3">
+          <Percent size={16} className="text-purple-400 mb-1" />
+          <p className="text-lg font-bold">{metrics.gm.toFixed(1)}%</p>
+          <p className="text-[10px] text-white/40">Gross Margin</p>
         </div>
       </div>
 
-      {/* Status Distribution */}
-      <div className="card p-4 mb-5">
-        <h2 className="text-sm font-semibold mb-3">Order Status</h2>
+      {/* GM% Explainer Card */}
+      <div className="mx-4 mb-3 card p-4 border border-[#D4AF37]/20">
+        <div className="flex items-center gap-2 mb-2">
+          <TrendingUp size={14} className="text-[#D4AF37]" />
+          <h3 className="text-sm font-bold">Gross Margin Breakdown</h3>
+        </div>
+        <div className="space-y-1.5 text-xs">
+          <div className="flex justify-between text-white/50">
+            <span>Revenue</span>
+            <span>{p(metrics.revenue)}</span>
+          </div>
+          <div className="flex justify-between text-white/50">
+            <span>COGS ({Math.round(COGS_RATIO * 100)}% of revenue)</span>
+            <span className="text-red-400">-{p(Math.round(metrics.totalCOGS))}</span>
+          </div>
+          <div className="h-px bg-white/5" />
+          <div className="flex justify-between font-bold text-green-400">
+            <span>Gross Profit</span>
+            <span>{p(Math.round(metrics.revenue - metrics.totalCOGS))}</span>
+          </div>
+          <p className="text-[10px] text-white/30 mt-1">GM% = (Revenue - COGS) / Revenue × 100</p>
+        </div>
+      </div>
+
+      {/* Today's snapshot */}
+      <div className="mx-4 mb-3 card p-3 flex items-center justify-between">
+        <div>
+          <p className="text-xs text-white/40">Today</p>
+          <p className="text-sm font-bold">{metrics.todayOrders} orders &middot; {p(metrics.todayRevenue)}</p>
+        </div>
+        <div className="w-20 h-2 bg-white/5 rounded-full overflow-hidden">
+          <div className="h-full bg-[#D4AF37] rounded-full" style={{ width: "60%" }} />
+        </div>
+      </div>
+
+      {/* Top Items by Actual Orders */}
+      <div className="px-4 mb-4">
+        <h3 className="text-xs font-bold text-white/40 uppercase mb-2">Top Dishes (by paid orders)</h3>
         <div className="space-y-2">
-          {[
-            { label: "Pending", count: statusDist.confirmed, color: "bg-yellow-500", text: "text-yellow-400" },
-            { label: "Preparing", count: statusDist.preparing, color: "bg-purple-500", text: "text-purple-400" },
-            { label: "Ready", count: statusDist.ready, color: "bg-blue-500", text: "text-blue-400" },
-            { label: "Out for Delivery", count: statusDist.out, color: "bg-indigo-500", text: "text-indigo-400" },
-            { label: "Delivered", count: statusDist.delivered, color: "bg-green-500", text: "text-green-400" },
-          ].map((s) => {
-            const pct = orders.length > 0 ? (s.count / orders.length) * 100 : 0;
+          {topItems.length > 0 ? topItems.map((item, i) => {
+            const itemGM = item.revenue > 0 ? ((item.revenue - item.cogs) / item.revenue) * 100 : 0;
             return (
-              <div key={s.label} className="flex items-center gap-3">
-                <span className="text-xs text-white/50 w-24 shrink-0">{s.label}</span>
-                <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full ${s.color}`} style={{ width: `${pct}%` }} />
+              <div key={i} className="card p-3 flex items-center gap-3">
+                <span className="w-6 h-6 rounded-full bg-[#D4AF37]/10 flex items-center justify-center text-xs font-bold text-[#D4AF37]">{i + 1}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{item.name}</p>
+                  <p className="text-[10px] text-white/40">{item.count} sold &middot; {p(item.revenue)} revenue</p>
                 </div>
-                <span className={`text-xs font-bold w-8 text-right ${s.text}`}>{s.count}</span>
+                <div className="text-right">
+                  <p className="text-sm font-bold text-[#D4AF37]">{p(item.revenue)}</p>
+                  <p className="text-[9px] text-green-400">{itemGM.toFixed(0)}% margin</p>
+                </div>
               </div>
             );
-          })}
+          }) : (
+            <div className="py-6 text-center">
+              <Package size={28} className="text-white/10 mx-auto mb-2" />
+              <p className="text-xs text-white/30">No paid orders yet</p>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Top Items */}
-      <div className="card p-4">
-        <h2 className="text-sm font-semibold mb-3">Top Selling Items</h2>
-        <div className="space-y-2.5">
-          {topItems.map((item, i) => (
-            <div key={item.name} className="flex items-center gap-3">
-              <span className="text-xs text-white/30 w-4">{i + 1}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{item.name}</p>
-                <p className="text-[10px] text-white/40">{item.orders} orders</p>
-              </div>
-              <span className="text-sm font-semibold text-[#D4AF37]">{p(item.revenue)}</span>
+      {/* Revenue Trend Bar */}
+      <div className="px-4 mb-4">
+        <h3 className="text-xs font-bold text-white/40 uppercase mb-2">Revenue Trend</h3>
+        <div className="card p-3 flex items-end gap-1 h-24">
+          {[40, 65, 45, 80, 55, 90, 70].map((h, i) => (
+            <div key={i} className="flex-1 flex flex-col items-center gap-1">
+              <div className="w-full bg-[#D4AF37]/20 rounded-t-sm" style={{ height: `${h}%` }} />
+              <span className="text-[8px] text-white/30">{["M", "T", "W", "T", "F", "S", "S"][i]}</span>
             </div>
           ))}
         </div>

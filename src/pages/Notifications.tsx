@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Bell, ShoppingBag, Tag, Truck, Star, Gift, Info, ChevronRight } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { ArrowLeft, Bell, ShoppingBag, Tag, Truck, Star, Gift, Info, ChevronRight, Home } from "lucide-react";
+import { ROUTES } from "@/lib/routes";
 
 const notifications = [
   { id: 1, icon: ShoppingBag, title: "Order Confirmed", body: "Your order TM1001 has been confirmed. Preparing now!", time: "2 min ago", color: "text-blue-400", bg: "bg-blue-500/10", read: false },
@@ -22,7 +23,7 @@ export default function NotificationsPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
       <div className="sticky top-0 z-50 bg-[#0a0a0a]/95 backdrop-blur-md border-b border-white/5 px-4 py-3 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="text-white/60"><ArrowLeft size={22} /></button>
+        <button onClick={() => navigate(ROUTES.home)} className="text-white/60"><ArrowLeft size={22} /></button>
         <Bell size={20} className="text-[#D4AF37]" />
         <h1 className="text-base font-semibold">Notifications</h1>
         <span className="ml-auto text-xs text-white/40">{items.filter((n) => !n.read).length} new</span>

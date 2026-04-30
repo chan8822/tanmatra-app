@@ -6,7 +6,7 @@ import { ROUTES } from "@/lib/routes";
 
 const tabs = [
   { to: ROUTES.home, label: "Home", icon: Home },
-  { to: ROUTES.menu, label: "Wellness", icon: Salad },
+  { to: ROUTES.menu, label: "Menu", icon: Salad },
   { to: ROUTES.cart, label: "Cart", icon: ShoppingCart, badge: true },
   { to: ROUTES.profile, label: "Profile", icon: User },
 ];

@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 
 // Customer pages (eager)
@@ -43,6 +43,15 @@ const lazyWrap = (Component: React.ComponentType) => (
   </Suspense>
 );
 
+const lazyWithNav = (Component: React.ComponentType) => (
+  <Suspense fallback={<div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center text-white/40 text-sm">Loading...</div>}>
+    <>
+      <Component />
+      <BottomNav />
+    </>
+  </Suspense>
+);
+
 export default function App() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white antialiased">
@@ -53,17 +62,17 @@ export default function App() {
         <Route path="/dish/:id" element={lazyWrap(DishPage)} />
         <Route path="/basket" element={<CartPage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
-        <Route path="/orders" element={<OrdersPage />} />
+        <Route path="/orders" element={withNav(OrdersPage)()} />
         <Route path="/track/:id" element={<TrackPage />} />
         <Route path="/profile" element={withNav(ProfilePage)()} />
-        <Route path="/wellness" element={lazyWrap(WellnessPage)} />
-        <Route path="/consult-rd" element={lazyWrap(ConsultRDPage)} />
+        <Route path="/wellness" element={lazyWithNav(WellnessPage)} />
+        <Route path="/consult-rd" element={lazyWithNav(ConsultRDPage)} />
         <Route path="/health-quiz" element={lazyWrap(HealthQuizPage)} />
-        <Route path="/gold" element={lazyWrap(GoldPage)} />
-        <Route path="/subscriptions" element={lazyWrap(SubscriptionsPage)} />
-        <Route path="/notifications" element={lazyWrap(NotificationsPage)} />
-        <Route path="/support" element={lazyWrap(SupportPage)} />
-        <Route path="/settings" element={lazyWrap(SettingsPage)} />
+        <Route path="/gold" element={lazyWithNav(GoldPage)} />
+        <Route path="/subscriptions" element={lazyWithNav(SubscriptionsPage)} />
+        <Route path="/notifications" element={lazyWithNav(NotificationsPage)} />
+        <Route path="/support" element={lazyWithNav(SupportPage)} />
+        <Route path="/settings" element={lazyWithNav(SettingsPage)} />
 
         {/* Admin / Ops Routes */}
         <Route path="/admin" element={lazyWrap(AdminPage)} />
@@ -72,6 +81,9 @@ export default function App() {
         <Route path="/admin/staff" element={lazyWrap(StaffPage)} />
         <Route path="/admin/riders" element={lazyWrap(RidersPage)} />
         <Route path="/admin/analytics" element={lazyWrap(AnalyticsPage)} />
+
+        {/* Catch-all: redirect unknown routes to Home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
   );

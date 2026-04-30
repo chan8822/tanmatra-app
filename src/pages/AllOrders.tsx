@@ -128,6 +128,11 @@ export default function AllOrdersPage() {
                     <span className={`text-[8px] px-1.5 py-0.5 rounded-full border flex items-center gap-1 ${cfg.color}`}>
                       <Icon size={8} /> {statusLabel(o.status)}
                     </span>
+                    {o.paymentStatus && (
+                      <span className={`text-[8px] px-1.5 py-0.5 rounded-full border ${o.paymentStatus === "paid" ? "bg-green-500/10 text-green-400 border-green-500/20" : o.paymentStatus === "pending" ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/20" : "bg-red-500/10 text-red-400 border-red-500/20"}`}>
+                        {o.paymentStatus === "paid" ? "✓ Paid" : o.paymentStatus === "pending" ? "⏳ Pending" : o.paymentStatus}
+                      </span>
+                    )}
                   </div>
                   <p className="text-[10px] text-white/40">{o.items?.length || 0} items &middot; {o.address || "No address"}</p>
                   <p className="text-[10px] text-white/30">{timeAgo(o.createdAt)}</p>
